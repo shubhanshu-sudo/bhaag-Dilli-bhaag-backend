@@ -1,0 +1,143 @@
+{
+    "info": {
+        "name": "Bhaag Dilli Bhaag API - Phase 1",
+        "description": "Event registration API endpoints",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Health Check",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://localhost:5000/health",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "5000",
+                    "path": [
+                        "health"
+                    ]
+                },
+                "description": "Check if server is running"
+            }
+        },
+        {
+            "name": "Create Registration - 2KM",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"name\": \"Rahul Kumar\",\n  \"email\": \"rahul@example.com\",\n  \"phone\": \"9876543210\",\n  \"race\": \"2KM\",\n  \"tshirtSize\": \"M\",\n  \"amount\": 499\n}"
+                },
+                "url": {
+                    "raw": "http://localhost:5000/api/register",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "5000",
+                    "path": [
+                        "api",
+                        "register"
+                    ]
+                },
+                "description": "Register for 2KM Fun Run"
+            }
+        },
+        {
+            "name": "Create Registration - 5KM",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"name\": \"Priya Sharma\",\n  \"email\": \"priya@example.com\",\n  \"phone\": \"9123456789\",\n  \"race\": \"5KM\",\n  \"tshirtSize\": \"S\",\n  \"amount\": 699\n}"
+                },
+                "url": {
+                    "raw": "http://localhost:5000/api/register",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "5000",
+                    "path": [
+                        "api",
+                        "register"
+                    ]
+                },
+                "description": "Register for 5KM Fitness Run (Most Popular)"
+            }
+        },
+        {
+            "name": "Create Registration - 10KM",
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n  \"name\": \"Amit Singh\",\n  \"email\": \"amit@example.com\",\n  \"phone\": \"9988776655\",\n  \"race\": \"10KM\",\n  \"tshirtSize\": \"L\",\n  \"amount\": 999\n}"
+                },
+                "url": {
+                    "raw": "http://localhost:5000/api/register",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "5000",
+                    "path": [
+                        "api",
+                        "register"
+                    ]
+                },
+                "description": "Register for 10KM Endurance Run"
+            }
+        },
+        {
+            "name": "Get Registration by ID",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://localhost:5000/api/register/:id",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "5000",
+                    "path": [
+                        "api",
+                        "register",
+                        ":id"
+                    ],
+                    "variable": [
+                        {
+                            "key": "id",
+                            "value": "PASTE_REGISTRATION_ID_HERE",
+                            "description": "Registration ID from create response"
+                        }
+                    ]
+                },
+                "description": "Fetch registration details by ID"
+            }
+        }
+    ]
+}
