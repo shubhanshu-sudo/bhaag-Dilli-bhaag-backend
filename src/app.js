@@ -8,7 +8,8 @@ const corsOptions = {
     origin: [
         'http://localhost:3000',           // Local development
         'http://localhost:3001',           // Alternative local port
-        'https://bhaag-dilli-bhaag-8bd2.vercel.app/', // Replace with your Vercel URL
+        'https://bhaag-dilli-bhaag-8bd2.vercel.app', // Vercel production (no trailing slash)
+        'http://bhaag-dilli-bhaag-8bd2.vercel.app',  // Vercel http variant
         // Add more frontend URLs as needed
     ],
     credentials: true,
