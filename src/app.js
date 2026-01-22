@@ -85,6 +85,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/register', require('./routes/register.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
+app.use('/api/payments', require('./routes/payment.routes'));
 
 // Root route
 app.get('/', (req, res) => {
@@ -98,7 +99,8 @@ app.get('/', (req, res) => {
             register: '/api/register',
             adminLogin: '/api/admin/login',
             adminRegistrations: '/api/admin/registrations (Protected)',
-            adminStats: '/api/admin/stats (Protected)'
+            adminStats: '/api/admin/stats (Protected)',
+            createPaymentOrder: '/api/payments/create-order'
         }
     });
 });

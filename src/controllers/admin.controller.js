@@ -86,7 +86,7 @@ const getRegistrations = async (req, res) => {
         const stats = {
             total: registrations.length,
             pending: registrations.filter(r => r.paymentStatus === 'pending').length,
-            completed: registrations.filter(r => r.paymentStatus === 'completed').length,
+            paid: registrations.filter(r => r.paymentStatus === 'paid').length,
             failed: registrations.filter(r => r.paymentStatus === 'failed').length,
             byRace: {
                 '2KM': registrations.filter(r => r.race === '2KM').length,
@@ -150,11 +150,11 @@ const getDashboardStats = async (req, res) => {
     try {
         const totalRegistrations = await Registration.countDocuments();
         const pendingPayments = await Registration.countDocuments({ paymentStatus: 'pending' });
-        const completedPayments = await Registration.countDocuments({ paymentStatus: 'completed' });
+        const paidPayments = await Registration.countDocuments({ paymentStatus: 'paid' });
 
-        // Revenue calculation (only completed payments)
-        const completedRegs = await Registration.find({ paymentStatus: 'completed' });
-        const totalRevenue = completedRegs.reduce((sum, reg) => sum + (reg.amount || 0), 0);
+        // Revenue calculation (only paid payments)
+        const paidRegs = await Registration.find({ paymentStatus: 'paid' });
+        const totalRevenue = paidRegs.reduce((sum, reg) => sum + (reg.amount || 0), 0);
 
         // Race-wise breakdown
         const raceStats = await Registration.aggregate([
@@ -178,7 +178,7 @@ const getDashboardStats = async (req, res) => {
             stats: {
                 totalRegistrations,
                 pendingPayments,
-                completedPayments,
+                paidPayments,
                 totalRevenue,
                 raceStats,
                 recentRegistrations

@@ -41,7 +41,7 @@ const registrationSchema = new mongoose.Schema({
         }
     },
 
-    // Payment Information (Phase 1 - Basic)
+    // Payment Information
     amount: {
         type: Number,
         required: [true, 'Amount is required'],
@@ -49,11 +49,25 @@ const registrationSchema = new mongoose.Schema({
     },
     paymentStatus: {
         type: String,
-        enum: ['pending', 'completed', 'failed'],
+        enum: ['pending', 'paid', 'failed'],
         default: 'pending'
     },
 
-    // Future Phase Fields (Optional for now)
+    // Razorpay Payment Fields
+    razorpayOrderId: {
+        type: String,
+        default: null
+    },
+    razorpayPaymentId: {
+        type: String,
+        default: null
+    },
+    paymentDate: {
+        type: Date,
+        default: null
+    },
+
+    // Legacy fields (for backward compatibility)
     paymentId: {
         type: String,
         default: null
