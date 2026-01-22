@@ -18,6 +18,13 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
+
+// CRITICAL: Webhook route MUST come BEFORE express.json()
+// Razorpay webhook requires RAW body for signature verification
+const paymentRoutes = require('./routes/payment.routes');
+app.use('/api/payments', paymentRoutes);
+
+// NOW apply JSON parsing for all other routes
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -83,10 +90,9 @@ app.get('/health', (req, res) => {
     });
 });
 
-// API Routes
+// API Routes (other routes with JSON parsing)
 app.use('/api/register', require('./routes/register.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
-app.use('/api/payments', require('./routes/payment.routes'));
 
 // Root route
 app.get('/', (req, res) => {

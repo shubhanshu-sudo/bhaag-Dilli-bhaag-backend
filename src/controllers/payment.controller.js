@@ -190,7 +190,7 @@ const verifyPayment = async (req, res) => {
  * - Verifies webhook signature using HMAC SHA256
  * - Uses RAZORPAY_WEBHOOK_SECRET for validation
  * - Only processes payment.captured events
- * - Updates payment status to PAID (Completed)
+ * - Updates payment status to paid
  * 
  * Note: This endpoint uses express.raw() middleware to receive raw body
  * for signature verification. The raw body is required for HMAC validation.
@@ -208,8 +208,11 @@ const handleWebhook = async (req, res) => {
             });
         }
 
-        // Get raw body (must be string for signature verification)
-        const webhookBody = req.body.toString();
+        // CRITICAL: req.body is a Buffer when using express.raw()
+        // Convert Buffer to string for signature verification
+        const webhookBody = req.body.toString('utf8');
+
+        console.log('Webhook received - verifying signature...');
 
         // CRITICAL: Verify webhook signature
         // This ensures the webhook is actually from Razorpay

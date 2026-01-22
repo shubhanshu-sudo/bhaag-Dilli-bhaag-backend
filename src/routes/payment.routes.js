@@ -3,6 +3,44 @@ const router = express.Router();
 const { createOrder, verifyPayment, handleWebhook, checkPaymentStatus } = require('../controllers/payment.controller');
 
 /**
+ * CRITICAL: Webhook route MUST use raw body for signature verification
+ * This route is defined FIRST and uses express.raw() middleware
+ * All other routes will use express.json() middleware
+ */
+
+/**
+ * @route   POST /api/payments/webhook
+ * @desc    Handle Razorpay webhook events
+ * @access  Public (verified by webhook signature)
+ * 
+ * IMPORTANT: This route uses express.raw() middleware to receive raw body
+ * for signature verification. The raw body is required for HMAC validation.
+ * 
+ * Headers:
+ * {
+ *   "x-razorpay-signature": "webhook_signature"
+ * }
+ * 
+ * Body: Raw JSON (not parsed)
+ * 
+ * Handled Events:
+ * - payment.captured: Updates payment status to paid
+ * 
+ * Response:
+ * {
+ *   "success": true,
+ *   "message": "Payment confirmed successfully"
+ * }
+ */
+router.post('/webhook', express.raw({ type: 'application/json' }), handleWebhook);
+
+/**
+ * Apply JSON parsing middleware to all other routes
+ * Webhook route above will NOT be affected by this
+ */
+router.use(express.json());
+
+/**
  * @route   POST /api/payments/create-order
  * @desc    Create Razorpay order with backend-determined pricing
  * @access  Public
@@ -26,7 +64,7 @@ router.post('/create-order', createOrder);
 
 /**
  * @route   POST /api/payments/verify-payment
- * @desc    Verify Razorpay payment signature and update registration status
+ * @desc    Verify Razorpay payment signature (does NOT mark as paid)
  * @access  Public
  * 
  * Request Body:
@@ -40,38 +78,12 @@ router.post('/create-order', createOrder);
  * Response:
  * {
  *   "success": true,
- *   "message": "Payment verified successfully",
+ *   "message": "Payment signature verified. Awaiting confirmation.",
  *   "registrationId": "mongodb_id",
- *   "paymentStatus": "Pending_Confirmation"
+ *   "paymentStatus": "pending"
  * }
  */
 router.post('/verify-payment', verifyPayment);
-
-/**
- * @route   POST /api/payments/webhook
- * @desc    Handle Razorpay webhook events
- * @access  Public (verified by webhook signature)
- * 
- * IMPORTANT: This route uses express.raw() middleware to receive raw body
- * for signature verification. The raw body is required for HMAC validation.
- * 
- * Headers:
- * {
- *   "x-razorpay-signature": "webhook_signature"
- * }
- * 
- * Body: Raw JSON (not parsed)
- * 
- * Handled Events:
- * - payment.captured: Updates payment status to Completed
- * 
- * Response:
- * {
- *   "success": true,
- *   "message": "Payment confirmed successfully"
- * }
- */
-router.post('/webhook', express.raw({ type: 'application/json' }), handleWebhook);
 
 /**
  * @route   GET /api/payments/status/:registrationId
