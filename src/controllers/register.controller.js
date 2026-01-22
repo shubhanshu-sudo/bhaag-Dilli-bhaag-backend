@@ -1,4 +1,5 @@
 const Registration = require('../models/Registration');
+const { getRacePrice, isValidRaceCategory } = require('../config/raceConfig');
 
 /**
  * @desc    Create new registration
@@ -10,11 +11,28 @@ const createRegistration = async (req, res) => {
         const { name, email, phone, race, tshirtSize, amount } = req.body;
 
         // Validate required fields
-        if (!name || !email || !phone || !race || !tshirtSize || !amount) {
+        if (!name || !email || !phone || !race || !tshirtSize) {
             return res.status(400).json({
                 success: false,
                 message: 'Please provide all required fields'
             });
+        }
+
+        // Validate race category
+        if (!isValidRaceCategory(race)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid race category. Must be 2KM, 5KM, or 10KM'
+            });
+        }
+
+        // Get correct price from backend config (SECURITY: Don't trust frontend)
+        const correctPrice = getRacePrice(race);
+
+        // Validate frontend-sent amount matches backend price
+        if (amount && amount !== correctPrice) {
+            console.warn(`Price mismatch detected for ${race}: Frontend sent ${amount}, Backend expects ${correctPrice}`);
+            // We'll use the backend price regardless
         }
 
         // Check if email already registered
@@ -26,14 +44,14 @@ const createRegistration = async (req, res) => {
             });
         }
 
-        // Create new registration
+        // Create new registration with backend-calculated price
         const registration = await Registration.create({
             name,
             email,
             phone,
             race,
             tshirtSize,
-            amount,
+            amount: correctPrice, // Always use backend price
             paymentStatus: 'pending'
         });
 

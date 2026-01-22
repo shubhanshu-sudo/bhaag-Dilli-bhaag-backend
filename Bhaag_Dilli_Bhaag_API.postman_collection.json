@@ -94,7 +94,7 @@
                 ],
                 "body": {
                     "mode": "raw",
-                    "raw": "{\n  \"name\": \"Amit Singh\",\n  \"email\": \"amit@example.com\",\n  \"phone\": \"9988776655\",\n  \"race\": \"10KM\",\n  \"tshirtSize\": \"L\",\n  \"amount\": 999\n}"
+                    "raw": "{\n  \"name\": \"Amit Singh\",\n  \"email\": \"amit@example.com\",\n  \"phone\": \"9988776655\",\n  \"race\": \"10KM\",\n  \"tshirtSize\": \"L\",\n  \"amount\": 1199\n}"
                 },
                 "url": {
                     "raw": "http://localhost:5000/api/register",
