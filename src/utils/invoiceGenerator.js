@@ -1,0 +1,229 @@
+const PDFDocument = require('pdfkit');
+
+/**
+ * Invoice Generator for Bhaag Dilli Bhaag
+ * 
+ * Generates professional PDF invoices for race registrations
+ */
+
+/**
+ * Generate invoice PDF
+ * 
+ * @param {Object} registration - Registration document from database
+ * @returns {Promise<Buffer>} PDF buffer
+ */
+const generateInvoice = (registration) => {
+    return new Promise((resolve, reject) => {
+        try {
+            const doc = new PDFDocument({
+                size: 'A4',
+                margin: 50
+            });
+
+            // Collect PDF data in buffer
+            const buffers = [];
+            doc.on('data', buffers.push.bind(buffers));
+            doc.on('end', () => {
+                const pdfBuffer = Buffer.concat(buffers);
+                resolve(pdfBuffer);
+            });
+            doc.on('error', reject);
+
+            // Header with gradient effect (simulated with rectangles)
+            doc.rect(0, 0, doc.page.width, 150).fill('#1e3a8a');
+
+            // Event Logo/Title
+            doc.fontSize(32)
+                .fillColor('#ffffff')
+                .font('Helvetica-Bold')
+                .text('Bhaag Dilli Bhaag', 50, 40);
+
+            doc.fontSize(14)
+                .fillColor('#eab308')
+                .text('Registration Invoice', 50, 80);
+
+            // Invoice Info
+            doc.fontSize(10)
+                .fillColor('#ffffff')
+                .text(`Invoice Date: ${new Date().toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                })}`, 50, 110);
+
+            // Move to content area
+            let yPosition = 180;
+
+            // Invoice Title
+            doc.fontSize(20)
+                .fillColor('#1e3a8a')
+                .font('Helvetica-Bold')
+                .text('PAYMENT RECEIPT', 50, yPosition);
+
+            yPosition += 40;
+
+            // Registration ID Box
+            doc.rect(50, yPosition, doc.page.width - 100, 40)
+                .fillAndStroke('#dbeafe', '#3b82f6');
+
+            doc.fontSize(10)
+                .fillColor('#1e40af')
+                .font('Helvetica-Bold')
+                .text('REGISTRATION ID', 60, yPosition + 8);
+
+            doc.fontSize(12)
+                .fillColor('#1e3a8a')
+                .font('Helvetica')
+                .text(registration._id.toString(), 60, yPosition + 22);
+
+            yPosition += 60;
+
+            // Participant Details Section
+            doc.fontSize(14)
+                .fillColor('#1e3a8a')
+                .font('Helvetica-Bold')
+                .text('Participant Details', 50, yPosition);
+
+            yPosition += 25;
+
+            // Draw table-like structure
+            const drawDetailRow = (label, value, y) => {
+                doc.fontSize(10)
+                    .fillColor('#6b7280')
+                    .font('Helvetica')
+                    .text(label, 50, y);
+
+                doc.fontSize(10)
+                    .fillColor('#111827')
+                    .font('Helvetica-Bold')
+                    .text(value, 250, y, { width: 300, align: 'left' });
+
+                // Separator line
+                doc.strokeColor('#e5e7eb')
+                    .lineWidth(0.5)
+                    .moveTo(50, y + 18)
+                    .lineTo(doc.page.width - 50, y + 18)
+                    .stroke();
+
+                return y + 25;
+            };
+
+            yPosition = drawDetailRow('Name', registration.name, yPosition);
+            yPosition = drawDetailRow('Email', registration.email, yPosition);
+            yPosition = drawDetailRow('Phone', registration.phone, yPosition);
+            yPosition = drawDetailRow('Race Category', registration.race, yPosition);
+            yPosition = drawDetailRow('T-Shirt Size', registration.tshirtSize, yPosition);
+            yPosition = drawDetailRow('Registration Date', new Date(registration.createdAt).toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            }), yPosition);
+
+            yPosition += 20;
+
+            // Payment Details Section
+            doc.fontSize(14)
+                .fillColor('#1e3a8a')
+                .font('Helvetica-Bold')
+                .text('Payment Details', 50, yPosition);
+
+            yPosition += 25;
+
+            yPosition = drawDetailRow('Razorpay Order ID', registration.razorpayOrderId || 'N/A', yPosition);
+            yPosition = drawDetailRow('Razorpay Payment ID', registration.razorpayPaymentId || 'N/A', yPosition);
+            yPosition = drawDetailRow('Payment Status', 'PAID ✓', yPosition);
+            yPosition = drawDetailRow('Payment Date', registration.paymentDate ? new Date(registration.paymentDate).toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }) : 'N/A', yPosition);
+
+            yPosition += 20;
+
+            // Amount Section (highlighted)
+            doc.rect(50, yPosition, doc.page.width - 100, 60)
+                .fillAndStroke('#f0f9ff', '#3b82f6');
+
+            doc.fontSize(12)
+                .fillColor('#1e40af')
+                .font('Helvetica-Bold')
+                .text('TOTAL AMOUNT PAID', 60, yPosition + 15);
+
+            doc.fontSize(28)
+                .fillColor('#1e3a8a')
+                .font('Helvetica-Bold')
+                .text(`₹${registration.amount}`, doc.page.width - 150, yPosition + 15, {
+                    width: 100,
+                    align: 'right'
+                });
+
+            doc.fontSize(10)
+                .fillColor('#6b7280')
+                .font('Helvetica')
+                .text('(Indian Rupees)', 60, yPosition + 42);
+
+            yPosition += 80;
+
+            // Event Details
+            doc.fontSize(12)
+                .fillColor('#1e3a8a')
+                .font('Helvetica-Bold')
+                .text('Event Details', 50, yPosition);
+
+            yPosition += 20;
+
+            doc.fontSize(10)
+                .fillColor('#374151')
+                .font('Helvetica')
+                .text('Event: Bhaag Dilli Bhaag 2026', 50, yPosition);
+
+            yPosition += 15;
+
+            doc.text('Location: Delhi, India', 50, yPosition);
+
+            yPosition += 15;
+
+            doc.text('Currency: INR (Indian Rupees)', 50, yPosition);
+
+            // Footer
+            const footerY = doc.page.height - 100;
+
+            doc.rect(0, footerY, doc.page.width, 100)
+                .fill('#f9fafb');
+
+            doc.fontSize(9)
+                .fillColor('#6b7280')
+                .font('Helvetica')
+                .text('This is a system-generated invoice and does not require a signature.', 50, footerY + 20, {
+                    width: doc.page.width - 100,
+                    align: 'center'
+                });
+
+            doc.fontSize(8)
+                .fillColor('#9ca3af')
+                .text('For queries, contact: info@bhaagdillibhaag.in', 50, footerY + 40, {
+                    width: doc.page.width - 100,
+                    align: 'center'
+                });
+
+            doc.fontSize(8)
+                .fillColor('#9ca3af')
+                .text('© 2026 Bhaag Dilli Bhaag. All rights reserved.', 50, footerY + 55, {
+                    width: doc.page.width - 100,
+                    align: 'center'
+                });
+
+            // Finalize PDF
+            doc.end();
+
+        } catch (error) {
+            reject(error);
+        }
+    });
+};
+
+module.exports = {
+    generateInvoice
+};

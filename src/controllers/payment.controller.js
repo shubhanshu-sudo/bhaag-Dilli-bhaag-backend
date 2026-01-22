@@ -307,7 +307,32 @@ const handleWebhook = async (req, res) => {
             console.log('✅ Payment confirmed for registration:', registrationId);
             console.log('📊 Updated status:', updatedRegistration.paymentStatus);
 
-            // Return 200 OK to Razorpay
+            // IMPORTANT: Send confirmation email with invoice (non-blocking)
+            // This runs asynchronously and doesn't block the webhook response
+            setImmediate(async () => {
+                try {
+                    console.log('📧 Generating invoice and sending confirmation email...');
+
+                    const { generateInvoice } = require('../utils/invoiceGenerator');
+                    const { sendRegistrationConfirmation } = require('../utils/emailService');
+
+                    // Generate PDF invoice
+                    const invoicePDF = await generateInvoice(updatedRegistration);
+                    console.log('✅ Invoice generated successfully');
+
+                    // Send email with invoice attachment
+                    await sendRegistrationConfirmation(updatedRegistration, invoicePDF);
+                    console.log('✅ Confirmation email sent to:', updatedRegistration.email);
+
+                } catch (emailError) {
+                    // Log error but don't fail the webhook
+                    console.error('❌ Error sending confirmation email:', emailError);
+                    console.error('Payment was successful but email failed for:', registrationId);
+                    // TODO: Add to email retry queue or manual notification system
+                }
+            });
+
+            // Return 200 OK to Razorpay immediately (don't wait for email)
             return res.status(200).json({
                 success: true,
                 message: 'Payment confirmed successfully'
