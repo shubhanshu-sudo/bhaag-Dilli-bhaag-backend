@@ -6,6 +6,25 @@
     },
     "item": [
         {
+            "name": "Ping (Keep-Alive)",
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "http://localhost:5000/ping",
+                    "protocol": "http",
+                    "host": [
+                        "localhost"
+                    ],
+                    "port": "5000",
+                    "path": [
+                        "ping"
+                    ]
+                },
+                "description": "Ultra-lightweight keep-alive endpoint for Render free-tier CRON jobs"
+            }
+        },
+        {
             "name": "Health Check",
             "request": {
                 "method": "GET",
@@ -21,7 +40,7 @@
                         "health"
                     ]
                 },
-                "description": "Check if server is running"
+                "description": "Check server health and uptime"
             }
         },
         {
