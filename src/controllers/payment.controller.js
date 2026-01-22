@@ -22,13 +22,21 @@ const razorpay = new Razorpay({
  */
 const createOrder = async (req, res) => {
     try {
-        const { raceCategory } = req.body;
+        const { raceCategory, registrationId } = req.body;
 
         // Validation: Check if raceCategory is provided
         if (!raceCategory) {
             return res.status(400).json({
                 success: false,
                 message: 'Race category is required'
+            });
+        }
+
+        // Validation: Check if registrationId is provided
+        if (!registrationId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Registration ID is required'
             });
         }
 
@@ -48,18 +56,24 @@ const createOrder = async (req, res) => {
         const receiptId = `receipt_${raceCategory}_${Date.now()}`;
 
         // Razorpay order options
+        // CRITICAL: Store registrationId in notes for webhook retrieval
         const options = {
             amount: amount * 100, // Razorpay expects amount in paise (smallest currency unit)
             currency: 'INR',
             receipt: receiptId,
             notes: {
+                registrationId: registrationId, // CRITICAL: For webhook to find registration
                 raceCategory: raceCategory,
                 createdAt: new Date().toISOString()
             }
         };
 
+        console.log('Creating Razorpay order with registrationId:', registrationId);
+
         // Create Razorpay order
         const order = await razorpay.orders.create(options);
+
+        console.log('Razorpay order created:', order.id);
 
         // Return order details to frontend
         return res.status(200).json({
@@ -237,7 +251,8 @@ const handleWebhook = async (req, res) => {
         const webhookData = JSON.parse(webhookBody);
         const event = webhookData.event;
 
-        console.log('Webhook received:', event);
+        console.log('✅ Webhook signature verified');
+        console.log('📨 Webhook event:', event);
 
         // Handle only payment.captured event
         if (event === 'payment.captured') {
@@ -246,17 +261,42 @@ const handleWebhook = async (req, res) => {
             const orderId = payment.order_id;
             const amount = payment.amount / 100; // Convert from paise to rupees
 
-            console.log('Payment captured:', {
+            // CRITICAL: Get registrationId from order notes
+            const registrationId = payment.notes?.registrationId;
+
+            console.log('💰 Payment captured:', {
                 paymentId,
                 orderId,
-                amount
+                amount,
+                registrationId
             });
 
-            // Find registration by razorpayOrderId
-            const registration = await Registration.findOne({ razorpayOrderId: orderId });
+            if (!registrationId) {
+                console.error('❌ Registration ID not found in payment notes');
+                console.error('Payment notes:', payment.notes);
+                // Still return 200 to Razorpay to acknowledge receipt
+                return res.status(200).json({
+                    success: true,
+                    message: 'Webhook received but registrationId missing in notes'
+                });
+            }
 
-            if (!registration) {
-                console.error('Registration not found for order:', orderId);
+            // CRITICAL: Update registration using findByIdAndUpdate for atomic operation
+            const updatedRegistration = await Registration.findByIdAndUpdate(
+                registrationId,
+                {
+                    $set: {
+                        paymentStatus: 'paid',
+                        razorpayPaymentId: paymentId,
+                        razorpayOrderId: orderId,
+                        paymentDate: new Date()
+                    }
+                },
+                { new: true } // Return updated document
+            );
+
+            if (!updatedRegistration) {
+                console.error('❌ Registration not found for ID:', registrationId);
                 // Still return 200 to Razorpay to acknowledge receipt
                 return res.status(200).json({
                     success: true,
@@ -264,18 +304,8 @@ const handleWebhook = async (req, res) => {
                 });
             }
 
-            // Update payment status to paid
-            registration.paymentStatus = 'paid';
-            registration.razorpayPaymentId = paymentId;
-
-            // Update payment date if not already set
-            if (!registration.paymentDate) {
-                registration.paymentDate = new Date();
-            }
-
-            await registration.save();
-
-            console.log('Payment confirmed for registration:', registration._id);
+            console.log('✅ Payment confirmed for registration:', registrationId);
+            console.log('📊 Updated status:', updatedRegistration.paymentStatus);
 
             // Return 200 OK to Razorpay
             return res.status(200).json({
