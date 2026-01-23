@@ -1,7 +1,11 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 const { getRacePrice, isValidRaceCategory } = require('../config/raceConfig');
 const Registration = require('../models/Registration');
+const { generateInvoice } = require('../utils/invoiceGenerator');
+const { sendRegistrationConfirmation } = require('../utils/emailService');
 
 // Initialize Razorpay instance
 const razorpay = new Razorpay({
@@ -10,76 +14,91 @@ const razorpay = new Razorpay({
 });
 
 /**
+ * Helper to trigger email instantly with de-duplication
+ */
+const triggerInstantEmail = async (registrationId, source = 'UNKNOWN') => {
+    const logPath = path.join(process.cwd(), 'email-debug.log');
+    const logMessage = (msg) => {
+        const timestamp = new Date().toISOString();
+        fs.appendFileSync(logPath, `${timestamp} - ${msg}\n`);
+    };
+
+    try {
+        // Fetch fresh registration to check flags
+        const registration = await Registration.findById(registrationId);
+
+        if (!registration) {
+            logMessage(`❌ [${source}] Registration not found: ${registrationId}`);
+            return;
+        }
+
+        // de-duplication check
+        if (registration.confirmationEmailSent) {
+            logMessage(`ℹ️ [${source}] Email already sent for ${registrationId}. Skipping.`);
+            return;
+        }
+
+        logMessage(`📧 [${source}] Triggering instant email for ${registrationId} (${registration.email})`);
+
+        // Generate PDF invoice
+        const invoicePDF = await generateInvoice(registration);
+        logMessage(`✅ [${source}] Invoice generated`);
+
+        // Send email
+        const result = await sendRegistrationConfirmation(registration, invoicePDF);
+
+        // Mark as sent in DB
+        registration.confirmationEmailSent = true;
+        await registration.save();
+
+        logMessage(`✅ [${source}] Email sent successfully. MsgID: ${result.messageId}`);
+    } catch (error) {
+        logMessage(`❌ [${source}] Email Error: ${error.message}`);
+        console.error(`[${source}] Email Error:`, error);
+    }
+};
+
+/**
  * @route   POST /api/payments/create-order
  * @desc    Create Razorpay order with backend-determined pricing
- * @access  Public
- * 
- * Security Features:
- * - Amount is NEVER accepted from frontend
- * - Price is determined strictly by backend using raceConfig
- * - Validates race category before processing
- * - Prevents price manipulation attacks
  */
 const createOrder = async (req, res) => {
     try {
         const { raceCategory, registrationId } = req.body;
 
-        // Validation: Check if raceCategory is provided
-        if (!raceCategory) {
+        if (!raceCategory || !registrationId) {
             return res.status(400).json({
                 success: false,
-                message: 'Race category is required'
+                message: 'Race category and Registration ID are required'
             });
         }
 
-        // Validation: Check if registrationId is provided
-        if (!registrationId) {
-            return res.status(400).json({
-                success: false,
-                message: 'Registration ID is required'
-            });
-        }
-
-        // Validation: Check if raceCategory is valid
         if (!isValidRaceCategory(raceCategory)) {
             return res.status(400).json({
                 success: false,
-                message: `Invalid race category: ${raceCategory}. Valid categories are: 2KM, 5KM, 10KM`
+                message: `Invalid race category: ${raceCategory}`
             });
         }
 
-        // CRITICAL: Get price from backend config (NOT from frontend)
-        // This prevents price manipulation attacks
         const amount = getRacePrice(raceCategory);
-
-        // Generate unique receipt ID
         const receiptId = `receipt_${raceCategory}_${Date.now()}`;
 
-        // Razorpay order options
-        // CRITICAL: Store registrationId in notes for webhook retrieval
         const options = {
-            amount: amount * 100, // Razorpay expects amount in paise (smallest currency unit)
+            amount: amount * 100, // paise
             currency: 'INR',
             receipt: receiptId,
             notes: {
-                registrationId: registrationId, // CRITICAL: For webhook to find registration
-                raceCategory: raceCategory,
-                createdAt: new Date().toISOString()
+                registrationId: registrationId,
+                raceCategory: raceCategory
             }
         };
 
-        console.log('Creating Razorpay order with registrationId:', registrationId);
-
-        // Create Razorpay order
         const order = await razorpay.orders.create(options);
 
-        console.log('Razorpay order created:', order.id);
-
-        // Return order details to frontend
         return res.status(200).json({
             success: true,
             orderId: order.id,
-            amount: amount, // Amount in rupees
+            amount: amount,
             currency: order.currency,
             receipt: order.receipt,
             raceCategory: raceCategory
@@ -87,17 +106,6 @@ const createOrder = async (req, res) => {
 
     } catch (error) {
         console.error('Error creating Razorpay order:', error);
-
-        // Handle Razorpay-specific errors
-        if (error.error) {
-            return res.status(400).json({
-                success: false,
-                message: 'Payment gateway error',
-                error: process.env.NODE_ENV === 'development' ? error.error.description : undefined
-            });
-        }
-
-        // Handle general errors
         return res.status(500).json({
             success: false,
             message: 'Failed to create payment order',
@@ -108,80 +116,59 @@ const createOrder = async (req, res) => {
 
 /**
  * @route   POST /api/payments/verify-payment
- * @desc    Verify Razorpay payment signature (does NOT mark as paid)
- * @access  Public
- * 
- * Security Features:
- * - Verifies payment signature using HMAC SHA256
- * - Validates payment authenticity
- * - Does NOT update payment status (webhook will do that)
- * - Saves payment IDs for webhook matching
- * 
- * Note: Payment status remains 'pending' after this call.
- * Only the webhook (payment.captured) will update status to 'paid'.
+ * @desc    Verify Razorpay payment signature
  */
 const verifyPayment = async (req, res) => {
     try {
         const { razorpay_order_id, razorpay_payment_id, razorpay_signature, registrationId } = req.body;
 
-        // Validation: Check if all required fields are provided
         if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing required payment verification fields (razorpay_order_id, razorpay_payment_id, razorpay_signature)'
+                message: 'Missing required payment verification fields'
             });
         }
 
-        // CRITICAL: Verify payment signature
-        // This ensures the payment was actually made through Razorpay
         const generatedSignature = crypto
             .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
             .update(`${razorpay_order_id}|${razorpay_payment_id}`)
             .digest('hex');
 
-        // Compare signatures
         if (generatedSignature !== razorpay_signature) {
-            console.error('Payment signature verification failed');
-            console.error('Expected:', generatedSignature);
-            console.error('Received:', razorpay_signature);
-
             return res.status(400).json({
                 success: false,
                 message: 'Payment verification failed. Invalid signature.'
             });
         }
 
-        // Signature is valid - Save payment IDs but DON'T change status
         if (registrationId) {
-            const registration = await Registration.findById(registrationId);
+            // CRITICAL: Update status to 'paid' immediately upon signature verification
+            // This provides the "Instant" feedback the user wants
+            const registration = await Registration.findByIdAndUpdate(
+                registrationId,
+                {
+                    $set: {
+                        paymentStatus: 'paid',
+                        razorpayOrderId: razorpay_order_id,
+                        razorpayPaymentId: razorpay_payment_id,
+                        paymentDate: new Date(),
+                        step: 'completed'
+                    }
+                },
+                { new: true }
+            );
 
-            if (!registration) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Registration not found'
-                });
+            if (registration) {
+                console.log('✅ INSTANT POS: Signature verified, marking as paid:', registrationId);
+
+                // TRIGGER EMAIL FLOW IMMEDIATELY
+                setImmediate(() => triggerInstantEmail(registrationId, 'VERIFY_PAYMENT'));
             }
-
-            // Save payment IDs for webhook matching
-            // Status remains 'pending' - webhook will update to 'paid'
-            registration.razorpayOrderId = razorpay_order_id;
-            registration.razorpayPaymentId = razorpay_payment_id;
-            registration.paymentDate = new Date();
-
-            await registration.save();
-
-            return res.status(200).json({
-                success: true,
-                message: 'Payment signature verified. Awaiting confirmation.',
-                registrationId: registration._id,
-                paymentStatus: registration.paymentStatus // Will be 'pending'
-            });
         }
 
-        // If no registrationId provided, just verify signature
         return res.status(200).json({
             success: true,
-            message: 'Payment signature verified successfully',
+            message: 'Payment verified successfully and confirmation dispatched.',
             verified: true
         });
 
@@ -190,7 +177,7 @@ const verifyPayment = async (req, res) => {
         return res.status(500).json({
             success: false,
             message: 'Failed to verify payment',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: error.message
         });
     }
 };
@@ -198,186 +185,77 @@ const verifyPayment = async (req, res) => {
 /**
  * @route   POST /api/payments/webhook
  * @desc    Handle Razorpay webhook events
- * @access  Public (verified by webhook signature)
- * 
- * Security Features:
- * - Verifies webhook signature using HMAC SHA256
- * - Uses RAZORPAY_WEBHOOK_SECRET for validation
- * - Only processes payment.captured events
- * - Updates payment status to paid
- * 
- * Note: This endpoint uses express.raw() middleware to receive raw body
- * for signature verification. The raw body is required for HMAC validation.
  */
 const handleWebhook = async (req, res) => {
     try {
-        // Get webhook signature from headers
         const webhookSignature = req.headers['x-razorpay-signature'];
-
         if (!webhookSignature) {
-            console.error('Webhook signature missing');
-            return res.status(400).json({
-                success: false,
-                message: 'Webhook signature missing'
-            });
+            return res.status(400).json({ success: false, message: 'Webhook signature missing' });
         }
 
-        // CRITICAL: req.body is a Buffer when using express.raw()
-        // Convert Buffer to string for signature verification
         const webhookBody = req.body.toString('utf8');
-
-        console.log('Webhook received - verifying signature...');
-
-        // CRITICAL: Verify webhook signature
-        // This ensures the webhook is actually from Razorpay
         const expectedSignature = crypto
             .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET)
             .update(webhookBody)
             .digest('hex');
 
-        // Compare signatures
         if (expectedSignature !== webhookSignature) {
-            console.error('Webhook signature verification failed');
-            console.error('Expected:', expectedSignature);
-            console.error('Received:', webhookSignature);
-
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid webhook signature'
-            });
+            return res.status(400).json({ success: false, message: 'Invalid webhook signature' });
         }
 
-        // Signature is valid - Parse the webhook payload
         const webhookData = JSON.parse(webhookBody);
         const event = webhookData.event;
 
-        console.log('✅ Webhook signature verified');
-        console.log('📨 Webhook event:', event);
-
-        // Handle only payment.captured event
         if (event === 'payment.captured') {
             const payment = webhookData.payload.payment.entity;
-            const paymentId = payment.id;
-            const orderId = payment.order_id;
-            const amount = payment.amount / 100; // Convert from paise to rupees
-
-            // CRITICAL: Get registrationId from order notes
             const registrationId = payment.notes?.registrationId;
 
-            console.log('💰 Payment captured:', {
-                paymentId,
-                orderId,
-                amount,
-                registrationId
-            });
-
             if (!registrationId) {
-                console.error('❌ Registration ID not found in payment notes');
-                console.error('Payment notes:', payment.notes);
-                // Still return 200 to Razorpay to acknowledge receipt
-                return res.status(200).json({
-                    success: true,
-                    message: 'Webhook received but registrationId missing in notes'
-                });
+                return res.status(200).json({ success: true, message: 'No registrationId in notes' });
             }
 
-            // CRITICAL: Update registration using findByIdAndUpdate for atomic operation
+            // Webhook serves as secondary confirmation
+            // If verifyPayment already marked it 'paid', this just ensures all IDs are correct
             const updatedRegistration = await Registration.findByIdAndUpdate(
                 registrationId,
                 {
                     $set: {
                         paymentStatus: 'paid',
-                        razorpayPaymentId: paymentId,
-                        razorpayOrderId: orderId,
-                        paymentDate: new Date()
+                        razorpayPaymentId: payment.id,
+                        razorpayOrderId: payment.order_id,
+                        paymentDate: new Date(),
+                        step: 'completed'
                     }
                 },
-                { new: true } // Return updated document
+                { new: true }
             );
 
-            if (!updatedRegistration) {
-                console.error('❌ Registration not found for ID:', registrationId);
-                // Still return 200 to Razorpay to acknowledge receipt
-                return res.status(200).json({
-                    success: true,
-                    message: 'Webhook received but registration not found'
-                });
+            if (updatedRegistration) {
+                console.log('✅ WEBHOOK: Confirmed capture for:', registrationId);
+
+                // TRIGGER EMAIL FLOW (Will self-deduplicate if already sent by verifyPayment)
+                setImmediate(() => triggerInstantEmail(registrationId, 'WEBHOOK'));
             }
-
-            console.log('✅ Payment confirmed for registration:', registrationId);
-            console.log('📊 Updated status:', updatedRegistration.paymentStatus);
-
-            // IMPORTANT: Send confirmation email with invoice (non-blocking)
-            // This runs asynchronously and doesn't block the webhook response
-            setImmediate(async () => {
-                try {
-                    console.log('📧 Generating invoice and sending confirmation email...');
-
-                    const { generateInvoice } = require('../utils/invoiceGenerator');
-                    const { sendRegistrationConfirmation } = require('../utils/emailService');
-
-                    // Generate PDF invoice
-                    const invoicePDF = await generateInvoice(updatedRegistration);
-                    console.log('✅ Invoice generated successfully');
-
-                    // Send email with invoice attachment
-                    await sendRegistrationConfirmation(updatedRegistration, invoicePDF);
-                    console.log('✅ Confirmation email sent to:', updatedRegistration.email);
-
-                } catch (emailError) {
-                    // Log error but don't fail the webhook
-                    console.error('❌ Error sending confirmation email:', emailError);
-                    console.error('Payment was successful but email failed for:', registrationId);
-                    // TODO: Add to email retry queue or manual notification system
-                }
-            });
-
-            // Return 200 OK to Razorpay immediately (don't wait for email)
-            return res.status(200).json({
-                success: true,
-                message: 'Payment confirmed successfully'
-            });
         }
 
-        // For other events, just acknowledge receipt
-        console.log('Webhook event ignored:', event);
-        return res.status(200).json({
-            success: true,
-            message: 'Webhook received'
-        });
+        return res.status(200).json({ success: true, message: 'Webhook processed' });
 
     } catch (error) {
         console.error('Error processing webhook:', error);
-
-        // Return 200 even on error to prevent Razorpay from retrying
-        // Log the error for manual investigation
-        return res.status(200).json({
-            success: false,
-            message: 'Webhook processing error',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
-        });
+        return res.status(200).json({ success: false, message: 'Internal error' });
     }
 };
 
 /**
  * @route   GET /api/payments/status/:registrationId
- * @desc    Check payment status for a registration (for polling)
- * @access  Public
- * 
- * This endpoint allows the frontend to poll for payment status updates
- * after the webhook has been received and processed.
  */
 const checkPaymentStatus = async (req, res) => {
     try {
         const { registrationId } = req.params;
-
         const registration = await Registration.findById(registrationId);
 
         if (!registration) {
-            return res.status(404).json({
-                success: false,
-                message: 'Registration not found'
-            });
+            return res.status(404).json({ success: false, message: 'Not found' });
         }
 
         return res.status(200).json({
@@ -387,14 +265,57 @@ const checkPaymentStatus = async (req, res) => {
             razorpayPaymentId: registration.razorpayPaymentId,
             paymentDate: registration.paymentDate
         });
-
     } catch (error) {
-        console.error('Error checking payment status:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Failed to check payment status',
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        return res.status(500).json({ success: false, message: 'Error' });
+    }
+};
+
+/**
+ * @route   GET /api/payments/invoice/:registrationId
+ */
+const downloadInvoice = async (req, res) => {
+    try {
+        const { registrationId } = req.params;
+        const registration = await Registration.findById(registrationId);
+
+        if (!registration || registration.paymentStatus !== 'paid') {
+            return res.status(404).json({ success: false, message: 'Invoice not available' });
+        }
+
+        const invoicePDF = await generateInvoice(registration);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=invoice_${registrationId}.pdf`);
+        return res.status(200).send(invoicePDF);
+    } catch (error) {
+        return res.status(500).json({ success: false, message: 'Server error' });
+    }
+};
+
+/**
+ * @route   GET /api/payments/test-email/:registrationId
+ */
+const testEmail = async (req, res) => {
+    try {
+        const { registrationId } = req.params;
+        const registration = await Registration.findById(registrationId);
+
+        if (!registration) {
+            return res.status(404).json({ success: false, message: 'Not found' });
+        }
+
+        console.log(`Manual test email triggered for: ${registration.email}`);
+
+        const invoicePDF = await generateInvoice(registration);
+        const result = await sendRegistrationConfirmation(registration, invoicePDF);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Test email sent successfully',
+            messageId: result.messageId,
+            to: registration.email
         });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -402,5 +323,7 @@ module.exports = {
     createOrder,
     verifyPayment,
     handleWebhook,
-    checkPaymentStatus
+    checkPaymentStatus,
+    downloadInvoice,
+    testEmail
 };

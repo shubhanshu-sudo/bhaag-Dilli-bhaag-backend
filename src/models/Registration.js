@@ -4,10 +4,10 @@ const registrationSchema = new mongoose.Schema({
     // Personal Information
     name: {
         type: String,
-        required: [true, 'Name is required'],
         trim: true,
         minlength: [2, 'Name must be at least 2 characters'],
-        maxlength: [100, 'Name cannot exceed 100 characters']
+        maxlength: [100, 'Name cannot exceed 100 characters'],
+        default: null
     },
     email: {
         type: String,
@@ -18,9 +18,9 @@ const registrationSchema = new mongoose.Schema({
     },
     phone: {
         type: String,
-        required: [true, 'Phone number is required'],
         trim: true,
-        match: [/^[0-9]{10}$/, 'Please provide a valid 10-digit phone number']
+        match: [/^[0-9]{10}$/, 'Please provide a valid 10-digit phone number'],
+        default: null
     },
 
     // Race Details
@@ -34,17 +34,37 @@ const registrationSchema = new mongoose.Schema({
     },
     tshirtSize: {
         type: String,
-        required: [true, 'T-shirt size is required'],
         enum: {
             values: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
             message: 'Invalid T-shirt size'
-        }
+        },
+        default: null
+    },
+    gender: {
+        type: String,
+        enum: ['Male', 'Female', 'Other'],
+        default: null
+    },
+    dob: {
+        type: Date,
+        default: null
+    },
+    emergencyName: {
+        type: String,
+        trim: true,
+        default: null
+    },
+    emergencyPhone: {
+        type: String,
+        trim: true,
+        match: [/^[0-9]{10}$/, 'Please provide a valid 10-digit phone number'],
+        default: null
     },
 
     // Payment Information
     amount: {
         type: Number,
-        required: [true, 'Amount is required'],
+        default: 0,
         min: [0, 'Amount cannot be negative']
     },
     paymentStatus: {
@@ -66,6 +86,10 @@ const registrationSchema = new mongoose.Schema({
         type: Date,
         default: null
     },
+    confirmationEmailSent: {
+        type: Boolean,
+        default: false
+    },
 
     // Legacy fields (for backward compatibility)
     paymentId: {
@@ -77,6 +101,23 @@ const registrationSchema = new mongoose.Schema({
         default: null
     },
     orderId: {
+        type: String,
+        default: null
+    },
+
+    // Registration Step tracking
+    step: {
+        type: String,
+        enum: ['email_captured', 'form_completed', 'completed'],
+        default: 'email_captured'
+    },
+
+    // Additional metadata for reference
+    raceTitle: {
+        type: String,
+        default: null
+    },
+    raceDistance: {
         type: String,
         default: null
     },

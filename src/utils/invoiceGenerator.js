@@ -113,8 +113,16 @@ const generateInvoice = (registration) => {
             yPosition = drawDetailRow('Name', registration.name, yPosition);
             yPosition = drawDetailRow('Email', registration.email, yPosition);
             yPosition = drawDetailRow('Phone', registration.phone, yPosition);
+            yPosition = drawDetailRow('Gender', registration.gender || 'N/A', yPosition);
+            yPosition = drawDetailRow('Date of Birth', registration.dob ? new Date(registration.dob).toLocaleDateString('en-IN', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            }) : 'N/A', yPosition);
             yPosition = drawDetailRow('Race Category', registration.race, yPosition);
             yPosition = drawDetailRow('T-Shirt Size', registration.tshirtSize, yPosition);
+            yPosition = drawDetailRow('Emergency Contact', registration.emergencyName || 'N/A', yPosition);
+            yPosition = drawDetailRow('Emergency Phone', registration.emergencyPhone || 'N/A', yPosition);
             yPosition = drawDetailRow('Registration Date', new Date(registration.createdAt).toLocaleDateString('en-IN', {
                 day: 'numeric',
                 month: 'long',

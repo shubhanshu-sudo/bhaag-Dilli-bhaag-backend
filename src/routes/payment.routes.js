@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createOrder, verifyPayment, handleWebhook, checkPaymentStatus } = require('../controllers/payment.controller');
+const { createOrder, verifyPayment, handleWebhook, checkPaymentStatus, downloadInvoice, testEmail } = require('../controllers/payment.controller');
 
 /**
  * CRITICAL: Webhook route MUST use raw body for signature verification
@@ -102,5 +102,19 @@ router.post('/verify-payment', verifyPayment);
  * }
  */
 router.get('/status/:registrationId', checkPaymentStatus);
+
+/**
+ * @route   GET /api/payments/invoice/:registrationId
+ * @desc    Generate and download invoice PDF
+ * @access  Public
+ */
+router.get('/invoice/:registrationId', downloadInvoice);
+
+/**
+ * @route   GET /api/payments/test-email/:registrationId
+ * @desc    Manually trigger email for testing (checks if email flow works)
+ * @access  Public
+ */
+router.get('/test-email/:registrationId', testEmail);
 
 module.exports = router;

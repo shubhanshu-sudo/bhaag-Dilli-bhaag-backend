@@ -40,168 +40,272 @@ const sendRegistrationConfirmation = async (registration, invoicePDF) => {
             subject: 'Bhaag Dilli Bhaag – Registration Confirmed ✅',
             html: `
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration Confirmed - Bhaag Dilli Bhaag</title>
     <style>
+        /* Base Styles */
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            color: #333;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7fa;
+            color: #1a202c;
+            -webkit-font-smoothing: antialiased;
+        }
+        .wrapper {
+            width: 100%;
+            table-layout: fixed;
+            background-color: #f4f7fa;
+            padding-bottom: 40px;
+        }
+        .container {
+            width: 100%;
             max-width: 600px;
             margin: 0 auto;
-            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
+        /* Header */
         .header {
-            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-            color: white;
-            padding: 30px;
+            background-color: #1e3a8af2; /* blue-900 with transparency */
+            background-image: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+            padding: 40px 20px;
             text-align: center;
-            border-radius: 10px 10px 0 0;
+            color: #ffffff;
         }
         .header h1 {
             margin: 0;
             font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            text-transform: uppercase;
         }
+        .header p {
+            margin: 8px 0 0;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        /* Content */
         .content {
-            background: #ffffff;
-            padding: 30px;
-            border: 1px solid #e5e7eb;
-            border-top: none;
+            padding: 32px 24px;
         }
-        .success-badge {
-            background: #10b981;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 25px;
-            display: inline-block;
-            font-weight: bold;
-            margin: 20px 0;
-        }
-        .details-box {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 24px;
-            margin: 24px 0;
-        }
-        .amount {
-            font-size: 28px;
-            color: #1e3a8a;
-            font-weight: 700;
-        }
-        .footer {
-            background: #f9fafb;
-            padding: 20px;
+        .welcome-text {
             text-align: center;
-            border-radius: 0 0 10px 10px;
-            border: 1px solid #e5e7eb;
-            border-top: none;
-            font-size: 14px;
-            color: #6b7280;
+            margin-bottom: 32px;
         }
-        .button {
-            background: #eab308;
+        .welcome-text h2 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 8px;
             color: #1e3a8a;
-            padding: 12px 30px;
-            text-decoration: none;
-            border-radius: 25px;
-            display: inline-block;
-            font-weight: bold;
-            margin: 20px 0;
+        }
+        .welcome-text p {
+            font-size: 16px;
+            color: #4a5568;
+            line-height: 1.6;
+            margin: 0;
+        }
+        /* Details Card */
+        .details-card {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+        .details-card h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin: 0 0 16px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 15px;
+        }
+        .detail-label {
+            color: #64748b;
+            flex-shrink: 0;
+        }
+        .detail-value {
+            color: #0f172a;
+            font-weight: 600;
+            text-align: right;
+            padding-left: 20px;
+        }
+        .amount-row {
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 2px dashed #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .amount-label {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e3a8a;
+        }
+        .amount-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: #1e3a8a;
+        }
+        /* Info Boxes */
+        .info-section {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
         }
         .info-box {
-            background: #dbeafe;
+            background-color: #eff6ff;
             border-left: 4px solid #3b82f6;
-            padding: 15px;
-            margin: 20px 0;
-            border-radius: 4px;
+            padding: 16px;
+            border-radius: 8px;
+        }
+        .info-box strong {
+            display: block;
+            color: #1e40af;
+            margin-bottom: 4px;
+            font-size: 15px;
+        }
+        .info-box p {
+            margin: 0;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #1e3a8a;
+        }
+        /* Footer */
+        .footer {
+            padding: 32px 24px;
+            text-align: center;
+            background-color: #f8fafc;
+            color: #94a3b8;
+        }
+        .footer p {
+            font-size: 13px;
+            margin: 4px 0;
+        }
+        .footer a {
+            color: #3b82f6;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        /* Mobile Overrides */
+        @media screen and (max-width: 480px) {
+            .content {
+                padding: 24px 16px;
+            }
+            .header {
+                padding: 32px 16px;
+            }
+            .header h1 {
+                font-size: 24px;
+            }
+            .welcome-text h2 {
+                font-size: 20px;
+            }
+            .detail-row {
+                flex-direction: column;
+                margin-bottom: 16px;
+            }
+            .detail-value {
+                text-align: left;
+                padding-left: 0;
+                margin-top: 4px;
+            }
+            .amount-value {
+                font-size: 24px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🏃‍♂️ Bhaag Dilli Bhaag</h1>
-        <p style="margin: 10px 0 0 0; font-size: 16px;">Registration Confirmed!</p>
-    </div>
+    <div class="wrapper">
+        <div style="height: 20px;"></div>
+        <div class="container">
+            <!-- Header -->
+            <div class="header">
+                <h1>🏃‍♂️ Bhaag Dilli Bhaag</h1>
+                <p>Registration Official Confirmation</p>
+            </div>
 
-    <div class="content">
-        <div style="text-align: center;">
-            <div class="success-badge">✅ Payment Successful</div>
+            <!-- Main Content -->
+            <div class="content">
+                <div class="welcome-text">
+                    <h2>Got it, ${registration.name}!</h2>
+                    <p>Your spot for Bhaag Dilli Bhaag 2026 is officially reserved. Get ready for an epic race day!</p>
+                </div>
+
+                <!-- Registration Summary -->
+                <div class="details-card">
+                    <h3>Summary Details</h3>
+                    
+                    <div class="detail-row">
+                        <span class="detail-label">Registration ID</span>
+                        <span class="detail-value" style="font-family: monospace;">#${registration._id}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Participant</span>
+                        <span class="detail-value">${registration.name}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Race Category</span>
+                        <span class="detail-value" style="background: #1e3a81; color: white; padding: 2px 8px; border-radius: 4px;">${registration.race}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">T-Shirt Size</span>
+                        <span class="detail-value">${registration.tshirtSize}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Email</span>
+                        <span class="detail-value" style="font-size: 13px;">${registration.email}</span>
+                    </div>
+
+                    <div class="amount-row">
+                        <span class="amount-label">Total Paid</span>
+                        <span class="amount-value">₹${registration.amount}</span>
+                    </div>
+                </div>
+
+                <!-- Next Steps -->
+                <div class="info-section">
+                    <div class="info-box">
+                        <strong>📄 Official Invoice</strong>
+                        <p>We've attached your official payment receipt as a PDF to this email. Please keep it for your records.</p>
+                    </div>
+                    <div class="info-box" style="border-left-color: #eab308; background-color: #fffbeb;">
+                        <strong>📅 Race Kit Details</strong>
+                        <p>Information regarding BIB and T-shirt collection will be sent to this email 10 days before the event.</p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 32px; text-align: center; font-size: 15px; color: #4a5568;">
+                    <p>Questions? We're here to help.</p>
+                    <a href="mailto:info@bhaagdillibhaag.in" style="display: inline-block; padding: 10px 24px; background-color: #1e3a8a; color: white; border-radius: 8px; text-decoration: none; font-weight: 700; margin-top: 8px;">Contact Support</a>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+                <p>You received this because you registered for Bhaag Dilli Bhaag.</p>
+                <p>&copy; 2026 Bhaag Dilli Bhaag. All rights reserved.</p>
+                <div style="margin-top: 16px;">
+                    <a href="https://bhaag-dilli-bhaag-8bd2.vercel.app">Visit Website</a>
+                </div>
+            </div>
         </div>
-
-        <p style="font-size: 16px; line-height: 1.6;">Dear <strong>${registration.name}</strong>,</p>
-
-        <p style="font-size: 15px; line-height: 1.7; color: #4b5563;">Congratulations! Your registration for <strong>Bhaag Dilli Bhaag 2026</strong> has been confirmed. We're excited to see you at the race!</p>
-
-        <div class="details-box">
-            <h3 style="margin-top: 0; margin-bottom: 20px; color: #1e3a8a; font-size: 18px;">Registration Details</h3>
-            
-            <table style="width: 100%; border-collapse: collapse;">
-                <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 12px 0; color: #6b7280; font-size: 14px; width: 45%;">Registration ID</td>
-                    <td style="padding: 12px 0; color: #111827; font-weight: 600; font-size: 14px; text-align: right;">${registration._id}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 12px 0; color: #6b7280; font-size: 14px;">Name</td>
-                    <td style="padding: 12px 0; color: #111827; font-weight: 600; font-size: 14px; text-align: right;">${registration.name}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 12px 0; color: #6b7280; font-size: 14px;">Email</td>
-                    <td style="padding: 12px 0; color: #111827; font-weight: 600; font-size: 14px; text-align: right;">${registration.email}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 12px 0; color: #6b7280; font-size: 14px;">Phone</td>
-                    <td style="padding: 12px 0; color: #111827; font-weight: 600; font-size: 14px; text-align: right;">${registration.phone}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 12px 0; color: #6b7280; font-size: 14px;">Race Category</td>
-                    <td style="padding: 12px 0; color: #111827; font-weight: 600; font-size: 14px; text-align: right;">${registration.race}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 12px 0; color: #6b7280; font-size: 14px;">T-Shirt Size</td>
-                    <td style="padding: 12px 0; color: #111827; font-weight: 600; font-size: 14px; text-align: right;">${registration.tshirtSize}</td>
-                </tr>
-                <tr style="border-bottom: 1px solid #e5e7eb;">
-                    <td style="padding: 12px 0; color: #6b7280; font-size: 14px;">Registration Date</td>
-                    <td style="padding: 12px 0; color: #111827; font-weight: 600; font-size: 14px; text-align: right;">${new Date(registration.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
-                </tr>
-                <tr>
-                    <td style="padding: 16px 0 8px 0; color: #6b7280; font-size: 14px;">Amount Paid</td>
-                    <td style="padding: 16px 0 8px 0; color: #1e3a8a; font-weight: 700; font-size: 28px; text-align: right;">₹${registration.amount}</td>
-                </tr>
-            </table>
-        </div>
-
-        <div class="info-box">
-            <strong>📄 Invoice Attached</strong><br>
-            Your payment invoice is attached to this email for your records.
-        </div>
-
-        <div class="info-box">
-            <strong>📧 What's Next?</strong><br>
-            • You will receive race kit details closer to the event date<br>
-            • Keep your Registration ID safe for future reference<br>
-            • Check your email for event updates
-        </div>
-
-        <p style="margin-top: 30px;">If you have any questions, feel free to reach out to us at <a href="mailto:info@bhaagdillibhaag.in">info@bhaagdillibhaag.in</a></p>
-
-        <p>See you at the race! 🏃‍♂️💨</p>
-
-        <p style="margin-top: 30px;">
-            <strong>Team Bhaag Dilli Bhaag</strong>
-        </p>
-    </div>
-
-    <div class="footer">
-        <p style="margin: 0;">This is an automated confirmation email.</p>
-        <p style="margin: 5px 0;">© 2026 Bhaag Dilli Bhaag. All rights reserved.</p>
-        <p style="margin: 5px 0;">
-            <a href="mailto:info@bhaagdillibhaag.in" style="color: #3b82f6;">Support</a> | 
-            <a href="#" style="color: #3b82f6;">Privacy Policy</a>
-        </p>
     </div>
 </body>
 </html>

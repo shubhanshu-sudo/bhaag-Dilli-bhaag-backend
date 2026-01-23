@@ -1,6 +1,13 @@
 const express = require('express');
 const router = express.Router();
-const { createRegistration, getRegistrationById } = require('../controllers/register.controller');
+const { checkEmail, createRegistration, getRegistrationById } = require('../controllers/register.controller');
+
+/**
+ * @route   POST /api/register/check-email
+ * @desc    Check email and return existing registration or create draft
+ * @access  Public
+ */
+router.post('/check-email', checkEmail);
 
 /**
  * @route   POST /api/register
