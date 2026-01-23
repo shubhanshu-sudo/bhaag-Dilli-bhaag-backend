@@ -86,17 +86,19 @@ const generateInvoice = (registration) => {
 
             yPosition += 25;
 
-            // Draw table-like structure
+            // Draw table-like structure with right-aligned values
             const drawDetailRow = (label, value, y) => {
+                // Label (left-aligned)
                 doc.fontSize(10)
                     .fillColor('#6b7280')
                     .font('Helvetica')
-                    .text(label, 50, y);
+                    .text(label, 50, y, { width: 200, align: 'left' });
 
+                // Value (right-aligned)
                 doc.fontSize(10)
                     .fillColor('#111827')
                     .font('Helvetica-Bold')
-                    .text(value, 250, y, { width: 300, align: 'left' });
+                    .text(value, 250, y, { width: doc.page.width - 300, align: 'right' });
 
                 // Separator line
                 doc.strokeColor('#e5e7eb')
@@ -142,50 +144,41 @@ const generateInvoice = (registration) => {
 
             yPosition += 20;
 
-            // Amount Section (highlighted)
-            doc.rect(50, yPosition, doc.page.width - 100, 60)
+            // Amount Section (highlighted) - Using column layout
+            const boxHeight = 80;
+            doc.rect(50, yPosition, doc.page.width - 100, boxHeight)
                 .fillAndStroke('#f0f9ff', '#3b82f6');
 
+            // Title
             doc.fontSize(12)
                 .fillColor('#1e40af')
                 .font('Helvetica-Bold')
-                .text('TOTAL AMOUNT PAID', 60, yPosition + 15);
-
-            doc.fontSize(28)
-                .fillColor('#1e3a8a')
-                .font('Helvetica-Bold')
-                .text(`₹${registration.amount}`, doc.page.width - 150, yPosition + 15, {
-                    width: 100,
-                    align: 'right'
+                .text('TOTAL AMOUNT PAID', 0, yPosition + 15, {
+                    width: doc.page.width,
+                    align: 'center'
                 });
 
-            doc.fontSize(10)
-                .fillColor('#6b7280')
-                .font('Helvetica')
-                .text('(Indian Rupees)', 60, yPosition + 42);
+            // Amount - Format as integer and use Rs. to avoid symbol issues
+            const formattedAmount = Math.round(registration.amount);
 
-            yPosition += 80;
-
-            // Event Details
-            doc.fontSize(12)
+            doc.fontSize(36)
                 .fillColor('#1e3a8a')
                 .font('Helvetica-Bold')
-                .text('Event Details', 50, yPosition);
+                .text(`Rs. ${formattedAmount}`, 0, yPosition + 35, {
+                    width: doc.page.width,
+                    align: 'center'
+                });
 
-            yPosition += 20;
-
-            doc.fontSize(10)
-                .fillColor('#374151')
+            // Subtitle
+            doc.fontSize(9)
+                .fillColor('#6b7280')
                 .font('Helvetica')
-                .text('Event: Bhaag Dilli Bhaag 2026', 50, yPosition);
+                .text('(Indian Rupees)', 0, yPosition + boxHeight - 15, {
+                    width: doc.page.width,
+                    align: 'center'
+                });
 
-            yPosition += 15;
-
-            doc.text('Location: Delhi, India', 50, yPosition);
-
-            yPosition += 15;
-
-            doc.text('Currency: INR (Indian Rupees)', 50, yPosition);
+            yPosition += boxHeight + 20;
 
             // Footer
             const footerY = doc.page.height - 100;

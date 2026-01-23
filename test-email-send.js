@@ -13,10 +13,10 @@ const testRegistration = {
     _id: '507f1f77bcf86cd799439011',
     name: 'Test User',
     email: process.env.SMTP_USER, // Send to your own email for testing
-    phone: '+91 9876543210',
-    race: '5 KM',
+    phone: '9876543210',
+    race: '5KM',
     tshirtSize: 'M',
-    amount: 699,
+    amount: 699, // 5KM race price
     paymentStatus: 'paid',
     razorpayOrderId: 'order_test_123456789',
     razorpayPaymentId: 'pay_test_987654321',

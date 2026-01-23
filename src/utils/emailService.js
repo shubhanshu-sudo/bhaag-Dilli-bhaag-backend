@@ -83,30 +83,13 @@ const sendRegistrationConfirmation = async (registration, invoicePDF) => {
             background: #f9fafb;
             border: 1px solid #e5e7eb;
             border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        .detail-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        .detail-row:last-child {
-            border-bottom: none;
-        }
-        .detail-label {
-            color: #6b7280;
-            font-weight: 500;
-        }
-        .detail-value {
-            color: #111827;
-            font-weight: 600;
+            padding: 24px;
+            margin: 24px 0;
         }
         .amount {
-            font-size: 24px;
+            font-size: 28px;
             color: #1e3a8a;
-            font-weight: bold;
+            font-weight: 700;
         }
         .footer {
             background: #f9fafb;
@@ -148,47 +131,47 @@ const sendRegistrationConfirmation = async (registration, invoicePDF) => {
             <div class="success-badge">✅ Payment Successful</div>
         </div>
 
-        <p>Dear <strong>${registration.name}</strong>,</p>
+        <p style="font-size: 16px; line-height: 1.6;">Dear <strong>${registration.name}</strong>,</p>
 
-        <p>Congratulations! Your registration for <strong>Bhaag Dilli Bhaag</strong> has been confirmed. We're excited to see you at the race!</p>
+        <p style="font-size: 15px; line-height: 1.7; color: #4b5563;">Congratulations! Your registration for <strong>Bhaag Dilli Bhaag 2026</strong> has been confirmed. We're excited to see you at the race!</p>
 
         <div class="details-box">
-            <h3 style="margin-top: 0; color: #1e3a8a;">Registration Details</h3>
+            <h3 style="margin-top: 0; margin-bottom: 20px; color: #1e3a8a; font-size: 18px;">Registration Details</h3>
             
-            <div class="detail-row">
-                <span class="detail-label">Registration ID</span>
-                <span class="detail-value">${registration._id}</span>
-            </div>
-            
-            <div class="detail-row">
-                <span class="detail-label">Name</span>
-                <span class="detail-value">${registration.name}</span>
-            </div>
-            
-            <div class="detail-row">
-                <span class="detail-label">Email</span>
-                <span class="detail-value">${registration.email}</span>
-            </div>
-            
-            <div class="detail-row">
-                <span class="detail-label">Phone</span>
-                <span class="detail-value">${registration.phone}</span>
-            </div>
-            
-            <div class="detail-row">
-                <span class="detail-label">Race Category</span>
-                <span class="detail-value">${registration.race}</span>
-            </div>
-            
-            <div class="detail-row">
-                <span class="detail-label">T-Shirt Size</span>
-                <span class="detail-value">${registration.tshirtSize}</span>
-            </div>
-            
-            <div class="detail-row">
-                <span class="detail-label">Amount Paid</span>
-                <span class="amount">₹${registration.amount}</span>
-            </div>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 12px 0; color: #6b7280; font-size: 14px; width: 45%;">Registration ID</td>
+                    <td style="padding: 12px 0; color: #111827; font-weight: 600; font-size: 14px; text-align: right;">${registration._id}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 12px 0; color: #6b7280; font-size: 14px;">Name</td>
+                    <td style="padding: 12px 0; color: #111827; font-weight: 600; font-size: 14px; text-align: right;">${registration.name}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 12px 0; color: #6b7280; font-size: 14px;">Email</td>
+                    <td style="padding: 12px 0; color: #111827; font-weight: 600; font-size: 14px; text-align: right;">${registration.email}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 12px 0; color: #6b7280; font-size: 14px;">Phone</td>
+                    <td style="padding: 12px 0; color: #111827; font-weight: 600; font-size: 14px; text-align: right;">${registration.phone}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 12px 0; color: #6b7280; font-size: 14px;">Race Category</td>
+                    <td style="padding: 12px 0; color: #111827; font-weight: 600; font-size: 14px; text-align: right;">${registration.race}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 12px 0; color: #6b7280; font-size: 14px;">T-Shirt Size</td>
+                    <td style="padding: 12px 0; color: #111827; font-weight: 600; font-size: 14px; text-align: right;">${registration.tshirtSize}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 12px 0; color: #6b7280; font-size: 14px;">Registration Date</td>
+                    <td style="padding: 12px 0; color: #111827; font-weight: 600; font-size: 14px; text-align: right;">${new Date(registration.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</td>
+                </tr>
+                <tr>
+                    <td style="padding: 16px 0 8px 0; color: #6b7280; font-size: 14px;">Amount Paid</td>
+                    <td style="padding: 16px 0 8px 0; color: #1e3a8a; font-weight: 700; font-size: 28px; text-align: right;">₹${registration.amount}</td>
+                </tr>
+            </table>
         </div>
 
         <div class="info-box">
