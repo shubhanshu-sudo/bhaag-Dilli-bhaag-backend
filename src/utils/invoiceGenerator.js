@@ -52,50 +52,50 @@ const generateInvoice = (registration) => {
                 })}`, 50, 110);
 
             // Move to content area
-            let yPosition = 180;
+            let yPosition = 170;
 
             // Invoice Title
-            doc.fontSize(20)
+            doc.fontSize(18)
                 .fillColor('#1e3a8a')
                 .font('Helvetica-Bold')
                 .text('PAYMENT RECEIPT', 50, yPosition);
 
-            yPosition += 40;
+            yPosition += 30;
 
             // Registration ID Box
-            doc.rect(50, yPosition, doc.page.width - 100, 40)
+            doc.rect(50, yPosition, doc.page.width - 100, 35)
                 .fillAndStroke('#dbeafe', '#3b82f6');
 
-            doc.fontSize(10)
+            doc.fontSize(9)
                 .fillColor('#1e40af')
                 .font('Helvetica-Bold')
-                .text('REGISTRATION ID', 60, yPosition + 8);
+                .text('REGISTRATION ID', 60, yPosition + 6);
 
-            doc.fontSize(12)
+            doc.fontSize(11)
                 .fillColor('#1e3a8a')
                 .font('Helvetica')
-                .text(registration._id.toString(), 60, yPosition + 22);
+                .text(registration._id.toString(), 60, yPosition + 18);
 
-            yPosition += 60;
+            yPosition += 50;
 
             // Participant Details Section
-            doc.fontSize(14)
+            doc.fontSize(13)
                 .fillColor('#1e3a8a')
                 .font('Helvetica-Bold')
                 .text('Participant Details', 50, yPosition);
 
-            yPosition += 25;
+            yPosition += 20;
 
             // Draw table-like structure with right-aligned values
             const drawDetailRow = (label, value, y) => {
                 // Label (left-aligned)
-                doc.fontSize(10)
+                doc.fontSize(9)
                     .fillColor('#6b7280')
                     .font('Helvetica')
                     .text(label, 50, y, { width: 200, align: 'left' });
 
                 // Value (right-aligned)
-                doc.fontSize(10)
+                doc.fontSize(9)
                     .fillColor('#111827')
                     .font('Helvetica-Bold')
                     .text(value, 250, y, { width: doc.page.width - 300, align: 'right' });
@@ -103,11 +103,11 @@ const generateInvoice = (registration) => {
                 // Separator line
                 doc.strokeColor('#e5e7eb')
                     .lineWidth(0.5)
-                    .moveTo(50, y + 18)
-                    .lineTo(doc.page.width - 50, y + 18)
+                    .moveTo(50, y + 15)
+                    .lineTo(doc.page.width - 50, y + 15)
                     .stroke();
 
-                return y + 25;
+                return y + 21;
             };
 
             yPosition = drawDetailRow('Name', registration.name, yPosition);
@@ -129,15 +129,15 @@ const generateInvoice = (registration) => {
                 year: 'numeric'
             }), yPosition);
 
-            yPosition += 20;
+            yPosition += 15;
 
             // Payment Details Section
-            doc.fontSize(14)
+            doc.fontSize(13)
                 .fillColor('#1e3a8a')
                 .font('Helvetica-Bold')
                 .text('Payment Details', 50, yPosition);
 
-            yPosition += 25;
+            yPosition += 20;
 
             yPosition = drawDetailRow('Razorpay Order ID', registration.razorpayOrderId || 'N/A', yPosition);
             yPosition = drawDetailRow('Razorpay Payment ID', registration.razorpayPaymentId || 'N/A', yPosition);
@@ -150,18 +150,18 @@ const generateInvoice = (registration) => {
                 minute: '2-digit'
             }) : 'N/A', yPosition);
 
-            yPosition += 20;
+            yPosition += 15;
 
             // Amount Section (highlighted) - Using column layout
-            const boxHeight = 80;
+            const boxHeight = 70;
             doc.rect(50, yPosition, doc.page.width - 100, boxHeight)
                 .fillAndStroke('#f0f9ff', '#3b82f6');
 
             // Title
-            doc.fontSize(12)
+            doc.fontSize(11)
                 .fillColor('#1e40af')
                 .font('Helvetica-Bold')
-                .text('TOTAL AMOUNT PAID', 0, yPosition + 15, {
+                .text('TOTAL AMOUNT PAID', 0, yPosition + 12, {
                     width: doc.page.width,
                     align: 'center'
                 });
@@ -169,24 +169,24 @@ const generateInvoice = (registration) => {
             // Amount - Format as integer and use Rs. to avoid symbol issues
             const formattedAmount = Math.round(registration.amount);
 
-            doc.fontSize(36)
+            doc.fontSize(32)
                 .fillColor('#1e3a8a')
                 .font('Helvetica-Bold')
-                .text(`Rs. ${formattedAmount}`, 0, yPosition + 35, {
+                .text(`Rs. ${formattedAmount}`, 0, yPosition + 28, {
                     width: doc.page.width,
                     align: 'center'
                 });
 
             // Subtitle
-            doc.fontSize(9)
+            doc.fontSize(8)
                 .fillColor('#6b7280')
                 .font('Helvetica')
-                .text('(Indian Rupees)', 0, yPosition + boxHeight - 15, {
+                .text('(Indian Rupees)', 0, yPosition + boxHeight - 12, {
                     width: doc.page.width,
                     align: 'center'
                 });
 
-            yPosition += boxHeight + 20;
+            yPosition += boxHeight + 15;
 
             // Footer
             const footerY = doc.page.height - 100;

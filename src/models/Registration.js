@@ -109,7 +109,7 @@ const registrationSchema = new mongoose.Schema({
     step: {
         type: String,
         enum: ['email_captured', 'form_completed', 'completed'],
-        default: 'email_captured'
+        default: 'form_completed'
     },
 
     // Additional metadata for reference

@@ -50,20 +50,12 @@ const checkEmail = async (req, res) => {
             });
         }
 
-        // Case 3: New user - Create a temporary draft document
-        const amount = getRacePrice(race || '5KM');
-        const draft = await Registration.create({
-            email,
-            race: race || '5KM',
-            amount: amount,
-            paymentStatus: 'pending',
-            step: 'email_captured'
-        });
-
+        // Case 3: New user - DO NOT create a document yet.
+        // We only check, we don't save until the full form is submitted.
         return res.json({
             success: true,
             exists: false,
-            registrationId: draft._id
+            message: 'New registration'
         });
 
     } catch (error) {
@@ -114,6 +106,10 @@ const createRegistration = async (req, res) => {
 
         // Get correct price from backend config
         const correctPrice = getRacePrice(race);
+
+        console.log('📝 Incoming Registration Payload:', {
+            name, email, phone, race, step: 'form_completed'
+        });
 
         // Check for existing pending registration to update
         let registration = null;
