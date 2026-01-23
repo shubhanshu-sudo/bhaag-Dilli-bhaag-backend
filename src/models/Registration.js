@@ -98,6 +98,9 @@ const registrationSchema = new mongoose.Schema({
 registrationSchema.index({ email: 1 });
 registrationSchema.index({ phone: 1 });
 registrationSchema.index({ createdAt: -1 });
+registrationSchema.index({ paymentStatus: 1 }); // For admin filtering
+registrationSchema.index({ race: 1 }); // For admin filtering
+registrationSchema.index({ paymentStatus: 1, createdAt: -1 }); // Compound index for common queries
 
 // Pre-save middleware to update the updatedAt field
 registrationSchema.pre('save', function (next) {

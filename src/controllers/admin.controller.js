@@ -71,33 +71,86 @@ const adminLogin = async (req, res) => {
 };
 
 /**
- * @desc    Get all registrations
+ * @desc    Get all registrations with search, filters, and pagination
  * @route   GET /api/admin/registrations
  * @access  Private (Admin only)
+ * @query   ?search=text&status=paid&race=5KM&page=1&limit=20
  */
 const getRegistrations = async (req, res) => {
     try {
-        // Fetch all registrations, sorted by latest first
-        const registrations = await Registration.find()
-            .sort({ createdAt: -1 })
-            .select('-__v'); // Exclude version key
+        // Extract query parameters
+        const {
+            search = '',
+            status = '',
+            race = '',
+            page = 1,
+            limit = 20
+        } = req.query;
 
-        // Get statistics
+        // Build query object
+        const query = {};
+
+        // Search across multiple fields
+        if (search) {
+            const searchConditions = [
+                { name: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { phone: { $regex: search, $options: 'i' } }
+            ];
+
+            // If search looks like a MongoDB ObjectId, also search by _id
+            if (search.match(/^[0-9a-fA-F]{24}$/)) {
+                searchConditions.push({ _id: search });
+            }
+
+            query.$or = searchConditions;
+        }
+
+        // Filter by payment status
+        if (status && ['pending', 'paid', 'failed'].includes(status)) {
+            query.paymentStatus = status;
+        }
+
+        // Filter by race category
+        if (race && ['2KM', '5KM', '10KM'].includes(race)) {
+            query.race = race;
+        }
+
+        // Calculate pagination
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
+        // Get total count for pagination
+        const totalRecords = await Registration.countDocuments(query);
+        const totalPages = Math.ceil(totalRecords / limitNum);
+
+        // Fetch registrations with pagination
+        const registrations = await Registration.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum)
+            .select('-__v');
+
+        // Get statistics (for all data, not just current page)
         const stats = {
-            total: registrations.length,
-            pending: registrations.filter(r => r.paymentStatus === 'pending').length,
-            paid: registrations.filter(r => r.paymentStatus === 'paid').length,
-            failed: registrations.filter(r => r.paymentStatus === 'failed').length,
+            total: await Registration.countDocuments(),
+            pending: await Registration.countDocuments({ paymentStatus: 'pending' }),
+            paid: await Registration.countDocuments({ paymentStatus: 'paid' }),
+            failed: await Registration.countDocuments({ paymentStatus: 'failed' }),
             byRace: {
-                '2KM': registrations.filter(r => r.race === '2KM').length,
-                '5KM': registrations.filter(r => r.race === '5KM').length,
-                '10KM': registrations.filter(r => r.race === '10KM').length
+                '2KM': await Registration.countDocuments({ race: '2KM' }),
+                '5KM': await Registration.countDocuments({ race: '5KM' }),
+                '10KM': await Registration.countDocuments({ race: '10KM' })
             }
         };
 
         res.status(200).json({
             success: true,
             count: registrations.length,
+            totalRecords,
+            totalPages,
+            currentPage: pageNum,
             stats,
             data: registrations
         });
@@ -118,7 +171,17 @@ const getRegistrations = async (req, res) => {
  */
 const getRegistrationById = async (req, res) => {
     try {
-        const registration = await Registration.findById(req.params.id);
+        const { id } = req.params;
+
+        // Validate MongoDB ObjectId format
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid registration ID format'
+            });
+        }
+
+        const registration = await Registration.findById(id);
 
         if (!registration) {
             return res.status(404).json({
