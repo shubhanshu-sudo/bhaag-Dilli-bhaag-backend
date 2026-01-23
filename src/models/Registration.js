@@ -69,8 +69,16 @@ const registrationSchema = new mongoose.Schema({
     },
     paymentStatus: {
         type: String,
-        enum: ['pending', 'paid', 'failed'],
+        enum: ['pending', 'paid', 'failed', 'abandoned', 'SUCCESS', 'FAILED', 'PENDING'],
         default: 'pending'
+    },
+    failureReason: {
+        type: String,
+        default: null
+    },
+    failureCode: {
+        type: String,
+        default: null
     },
 
     // Razorpay Payment Fields

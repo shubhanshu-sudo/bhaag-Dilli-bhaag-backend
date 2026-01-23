@@ -48,271 +48,128 @@ const sendRegistrationConfirmation = async (registration, invoicePDF) => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registration Confirmed - Bhaag Dilli Bhaag</title>
     <style>
-        /* Base Styles */
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f4f7fa;
-            color: #1a202c;
-            -webkit-font-smoothing: antialiased;
-        }
-        .wrapper {
-            width: 100%;
-            table-layout: fixed;
-            background-color: #f4f7fa;
-            padding-bottom: 40px;
-        }
-        .container {
-            width: 100%;
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        /* Header */
-        .header {
-            background-color: #1e3a8af2; /* blue-900 with transparency */
-            background-image: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-            padding: 40px 20px;
-            text-align: center;
-            color: #ffffff;
-        }
-        .header img {
-            max-height: 80px;
-            width: auto;
-            margin-bottom: 10px;
-        }
-        .header h1 {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 800;
-            letter-spacing: -0.025em;
-            text-transform: uppercase;
-        }
-        .header p {
-            margin: 8px 0 0;
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        /* Content */
-        .content {
-            padding: 32px 24px;
-        }
-        .welcome-text {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-        .welcome-text h2 {
-            font-size: 24px;
-            font-weight: 700;
-            margin: 0 0 8px;
-            color: #1e3a8a;
-        }
-        .welcome-text p {
-            font-size: 16px;
-            color: #4a5568;
-            line-height: 1.6;
-            margin: 0;
-        }
-        /* Details Card */
-        .details-card {
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 32px;
-        }
-        .details-card h3 {
-            font-size: 14px;
-            font-weight: 700;
-            color: #94a3b8;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            margin: 0 0 16px;
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 8px;
-        }
-        .detail-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 12px;
-            font-size: 15px;
-        }
-        .detail-label {
-            color: #64748b;
-            flex-shrink: 0;
-        }
-        .detail-value {
-            color: #0f172a;
-            font-weight: 600;
-            text-align: right;
-            padding-left: 20px;
-        }
-        .amount-row {
-            margin-top: 20px;
-            padding-top: 16px;
-            border-top: 2px dashed #e2e8f0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .amount-label {
-            font-size: 18px;
-            font-weight: 700;
-            color: #1e3a8a;
-        }
-        .amount-value {
-            font-size: 28px;
-            font-weight: 800;
-            color: #1e3a8a;
-        }
-        /* Info Boxes */
-        .info-section {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        .info-box {
-            background-color: #eff6ff;
-            border-left: 4px solid #3b82f6;
-            padding: 16px;
-            border-radius: 8px;
-        }
-        .info-box strong {
-            display: block;
-            color: #1e40af;
-            margin-bottom: 4px;
-            font-size: 15px;
-        }
-        .info-box p {
-            margin: 0;
-            font-size: 14px;
-            line-height: 1.5;
-            color: #1e3a8a;
-        }
-        /* Footer */
-        .footer {
-            padding: 32px 24px;
-            text-align: center;
-            background-color: #f8fafc;
-            color: #94a3b8;
-        }
-        .footer p {
-            font-size: 13px;
-            margin: 4px 0;
-        }
-        .footer a {
-            color: #3b82f6;
-            text-decoration: none;
-            font-weight: 600;
-        }
-        /* Mobile Overrides */
-        @media screen and (max-width: 480px) {
-            .content {
-                padding: 24px 16px;
-            }
-            .header {
-                padding: 32px 16px;
-            }
-            .header h1 {
-                font-size: 24px;
-            }
-            .welcome-text h2 {
-                font-size: 20px;
-            }
-            .detail-row {
-                flex-direction: column;
-                margin-bottom: 16px;
-            }
-            .detail-value {
-                text-align: left;
-                padding-left: 0;
-                margin-top: 4px;
-            }
-            .amount-value {
-                font-size: 24px;
-            }
+        body { margin: 0; padding: 0; background-color: #f7f9fc; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+        .wrapper { width: 100%; table-layout: fixed; background-color: #f7f9fc; padding-bottom: 20px; }
+        .container { width: 100%; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); padding: 50px 20px; text-align: center; color: #ffffff; }
+        .header img { max-height: 85px; width: auto; margin-bottom: 20px; }
+        .status-badge { background-color: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 50px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px; display: inline-block; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.3); }
+        .content { padding: 40px 30px; text-align: center; }
+        .welcome-title { font-size: 28px; font-weight: 900; color: #1e3a8a; margin: 0 0 10px 0; font-style: italic; }
+        .welcome-desc { font-size: 16px; color: #64748b; line-height: 1.6; margin-bottom: 40px; }
+        .ticket-card { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; position: relative; overflow: hidden; margin-bottom: 40px; text-align: left; }
+        .ticket-header { background-color: #f8fafc; padding: 20px 25px; border-bottom: 1px dashed #e2e8f0; }
+        .ticket-header h3 { margin: 0; font-size: 12px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px; }
+        .ticket-body { padding: 25px; }
+        .info-row { margin-bottom: 18px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; }
+        .info-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .info-label { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .info-value { display: block; font-size: 16px; font-weight: 700; color: #1e293b; }
+        .race-badge { display: inline-block; background-color: #1e3a8a; color: #ffffff; padding: 4px 12px; border-radius: 6px; font-size: 14px; margin-top: 5px; }
+        .payment-summary { margin-top: 20px; padding: 20px; background-color: #eff6ff; border-radius: 12px; }
+        .pay-table { width: 100%; border-collapse: collapse; }
+        .pay-label { font-size: 16px; font-weight: 700; color: #1e3a8a; text-align: left; }
+        .pay-value { font-size: 24px; font-weight: 900; color: #1e3a8a; text-align: right; }
+        .next-steps { text-align: left; background-color: #f8fafc; padding: 25px; border-radius: 16px; margin-top: 30px; }
+        .step-item { display: table; width: 100%; margin-bottom: 15px; }
+        .step-icon { display: table-cell; width: 30px; vertical-align: top; font-size: 20px; }
+        .step-text { display: table-cell; padding-left: 15px; font-size: 14px; color: #475569; line-height: 1.5; font-weight: 500; }
+        .cta-btn { display: inline-block; background-color: #1e3a8a; color: #ffffff !important; padding: 16px 40px; border-radius: 50px; font-weight: 900; text-decoration: none; text-transform: uppercase; letter-spacing: 1px; font-size: 14px; margin: 30px 0; box-shadow: 0 4px 15px rgba(30,58,138,0.2); }
+        .footer { padding: 40px 20px; text-align: center; color: #94a3b8; font-size: 12px; line-height: 1.6; }
+        .footer a { color: #3b82f6; text-decoration: none; font-weight: 700; }
+
+        @media (max-width: 480px) {
+            .container { border-radius: 0; }
+            .content { padding: 30px 20px; }
+            .welcome-title { font-size: 24px; }
+            .info-value { font-size: 15px; }
+            .pay-value { font-size: 20px; }
         }
     </style>
 </head>
 <body>
     <div class="wrapper">
-        <div style="height: 20px;"></div>
-        <div class="container">
-            <!-- Header -->
-            <div class="header">
-                <img src="cid:eventlogo" alt="Bhaag Dilli Bhaag Logo">
-                <p>Registration Official Confirmation</p>
-            </div>
-
-            <!-- Main Content -->
-            <div class="content">
-                <div class="welcome-text">
-                    <h2>Got it, ${registration.name}!</h2>
-                    <p>Your spot for Bhaag Dilli Bhaag 2026 is officially reserved. Get ready for an epic race day!</p>
+        <center>
+            <div class="container">
+                <div class="header">
+                    <div class="status-badge">Payment Success</div>
+                    <div><img src="cid:eventlogo" alt="Bhaag Dilli Bhaag Logo"></div>
+                    <p style="font-weight: 700; letter-spacing: 1px; margin-top: 5px;">OFFICIAL CONFIRMATION</p>
                 </div>
 
-                <!-- Registration Summary -->
-                <div class="details-card">
-                    <h3>Summary Details</h3>
+                <div class="content">
+                    <h2 class="welcome-title">WELCOME TO THE FOLD!</h2>
+                    <div class="welcome-desc">
+                        Hi ${registration.name}, your registration for <strong>Bhaag Dilli Bhaag 2026</strong> is confirmed. You are officially part of this movement!
+                    </div>
+
+                    <div class="ticket-card">
+                        <div class="ticket-header">
+                            <h3>Registration Details</h3>
+                        </div>
+                        <div class="ticket-body">
+                            <div class="info-row">
+                                <span class="info-label">REGISTRATION ID</span>
+                                <span class="info-value" style="font-family: monospace;">#${registration._id}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">PARTICIPANT NAME</span>
+                                <span class="info-value">${registration.name}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">RACE CATEGORY</span>
+                                <div><span class="race-badge">${registration.race}</span></div>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">T-SHIRT SIZE</span>
+                                <span class="info-value">${registration.tshirtSize}</span>
+                            </div>
+
+                            <div class="payment-summary">
+                                <table class="pay-table">
+                                    <tr>
+                                        <td class="pay-label">Total Amount Paid</td>
+                                        <td class="pay-value">₹${registration.amount}</td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="next-steps">
+                        <div class="step-item">
+                            <div class="step-icon">📧</div>
+                            <div class="step-text">We've attached your <strong>Official Invoice</strong> as a PDF to this email.</div>
+                        </div>
+                        <div class="step-item">
+                            <div class="step-icon">🎽</div>
+                            <div class="step-text"><strong>Race Kit collection</strong> (BIB & T-shirt) info will be sent 10 days before the event.</div>
+                        </div>
+                        <div class="step-item" style="margin-bottom: 0;">
+                            <div class="step-icon">📍</div>
+                            <div class="step-text">See you at <strong>Japanese Park, Rohini</strong> on 1st March 2026.</div>
+                        </div>
+                    </div>
+
+                    <a href="mailto:info@bhaagdillibhaag.in" class="cta-btn">Contact Support</a>
                     
-                    <div class="detail-row">
-                        <span class="detail-label">Registration ID</span>
-                        <span class="detail-value" style="font-family: monospace;">#${registration._id}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Participant</span>
-                        <span class="detail-value">${registration.name}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Race Category</span>
-                        <span class="detail-value" style="background: #1e3a81; color: white; padding: 2px 8px; border-radius: 4px;">${registration.race}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">T-Shirt Size</span>
-                        <span class="detail-value">${registration.tshirtSize}</span>
-                    </div>
-                    <div class="detail-row">
-                        <span class="detail-label">Email</span>
-                        <span class="detail-value" style="font-size: 13px;">${registration.email}</span>
-                    </div>
-
-                    <div class="amount-row">
-                        <span class="amount-label">Total Paid</span>
-                        <span class="amount-value">₹${registration.amount}</span>
+                    <div style="font-size: 14px; color: #94a3b8; font-weight: 500;">
+                        Questions? Reply directly to this email or visit our website.
                     </div>
                 </div>
 
-                <!-- Next Steps -->
-                <div class="info-section">
-                    <div class="info-box">
-                        <strong>📄 Official Invoice</strong>
-                        <p>We've attached your official payment receipt as a PDF to this email. Please keep it for your records.</p>
+                <div class="footer">
+                    <div><strong>Bhaag Dilli Bhaag 2026</strong></div>
+                    <div>Run with heart. Run for education.</div>
+                    <div style="margin-top: 20px;">
+                        <a href="https://bhaag-dilli-bhaag-8bd2.vercel.app">Official Website</a> &nbsp; | &nbsp; <a href="mailto:info@bhaagdillibhaag.in">Support</a>
                     </div>
-                    <div class="info-box" style="border-left-color: #eab308; background-color: #fffbeb;">
-                        <strong>📅 Race Kit Details</strong>
-                        <p>Information regarding BIB and T-shirt collection will be sent to this email 10 days before the event.</p>
+                    <div style="margin-top: 20px; font-size: 10px; opacity: 0.6;">
+                        &copy; 2026 Bhaag Dilli Bhaag by Round Table India. All rights reserved.
                     </div>
-                </div>
-
-                <div style="margin-top: 32px; text-align: center; font-size: 15px; color: #4a5568;">
-                    <p>Questions? We're here to help.</p>
-                    <a href="mailto:info@bhaagdillibhaag.in" style="display: inline-block; padding: 10px 24px; background-color: #1e3a8a; color: white; border-radius: 8px; text-decoration: none; font-weight: 700; margin-top: 8px;">Contact Support</a>
                 </div>
             </div>
-
-            <!-- Footer -->
-            <div class="footer">
-                <p>You received this because you registered for Bhaag Dilli Bhaag.</p>
-                <p>&copy; 2026 Bhaag Dilli Bhaag. All rights reserved.</p>
-                <div style="margin-top: 16px;">
-                    <a href="https://bhaag-dilli-bhaag-8bd2.vercel.app">Visit Website</a>
-                </div>
-            </div>
-        </div>
+        </center>
     </div>
 </body>
 </html>

@@ -50,16 +50,18 @@ const generateInvoice = (registration) => {
 
             doc.fontSize(12)
                 .fillColor('#eab308')
+                .font('Helvetica-Bold')
                 .text('Registration Invoice', 50, 105);
 
             // Invoice Info
             doc.fontSize(10)
                 .fillColor('#ffffff')
+                .font('Helvetica-Bold')
                 .text(`Invoice Date: ${new Date().toLocaleDateString('en-IN', {
                     day: 'numeric',
                     month: 'long',
                     year: 'numeric'
-                })}`, 50, 110);
+                })}`, 50, 122);
 
             // Move to content area
             let yPosition = 170;

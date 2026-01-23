@@ -183,8 +183,18 @@ const verifyPayment = async (req, res) => {
 };
 
 /**
+ * Payment Status Constants
+ */
+const PAYMENT_STATUS = {
+    PENDING: 'pending',
+    SUCCESS: 'paid',
+    FAILED: 'failed',
+    ABANDONED: 'abandoned'
+};
+
+/**
  * @route   POST /api/payments/webhook
- * @desc    Handle Razorpay webhook events
+ * @desc    Handle Razorpay webhook events (captured and failed)
  */
 const handleWebhook = async (req, res) => {
     try {
@@ -193,6 +203,7 @@ const handleWebhook = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Webhook signature missing' });
         }
 
+        // Verify webhook signature
         const webhookBody = req.body.toString('utf8');
         const expectedSignature = crypto
             .createHmac('sha256', process.env.RAZORPAY_WEBHOOK_SECRET)
@@ -200,48 +211,63 @@ const handleWebhook = async (req, res) => {
             .digest('hex');
 
         if (expectedSignature !== webhookSignature) {
+            console.error('❌ WEBHOOK: Invalid signature detected');
             return res.status(400).json({ success: false, message: 'Invalid webhook signature' });
         }
 
         const webhookData = JSON.parse(webhookBody);
         const event = webhookData.event;
+        const payment = webhookData.payload.payment?.entity;
+        const registrationId = payment?.notes?.registrationId;
 
-        if (event === 'payment.captured') {
-            const payment = webhookData.payload.payment.entity;
-            const registrationId = payment.notes?.registrationId;
+        if (!registrationId) {
+            console.warn('⚠️ WEBHOOK: Received event without registrationId in notes:', event);
+            return res.status(200).json({ success: true, message: 'No registrationId mapping - skipped' });
+        }
 
-            if (!registrationId) {
-                return res.status(200).json({ success: true, message: 'No registrationId in notes' });
-            }
+        // Handle SUCCESS (Captured)
+        if (event === 'payment.captured' || event === 'order.paid') {
+            const registration = await Registration.findById(registrationId);
 
-            // Webhook serves as secondary confirmation
-            // If verifyPayment already marked it 'paid', this just ensures all IDs are correct
-            const updatedRegistration = await Registration.findByIdAndUpdate(
-                registrationId,
-                {
-                    $set: {
-                        paymentStatus: 'paid',
-                        razorpayPaymentId: payment.id,
-                        razorpayOrderId: payment.order_id,
-                        paymentDate: new Date(),
-                        step: 'completed'
-                    }
-                },
-                { new: true }
-            );
+            // Idempotency: Only update if not already paid
+            if (registration && registration.paymentStatus !== PAYMENT_STATUS.SUCCESS) {
+                registration.paymentStatus = PAYMENT_STATUS.SUCCESS;
+                registration.razorpayPaymentId = payment.id;
+                registration.razorpayOrderId = payment.order_id;
+                registration.paymentDate = new Date();
+                registration.step = 'completed';
+                await registration.save();
 
-            if (updatedRegistration) {
-                console.log('✅ WEBHOOK: Confirmed capture for:', registrationId);
+                console.log('✅ WEBHOOK: Payment Success confirmed for:', registrationId);
 
-                // TRIGGER EMAIL FLOW (Will self-deduplicate if already sent by verifyPayment)
-                setImmediate(() => triggerInstantEmail(registrationId, 'WEBHOOK'));
+                // Trigger email (de-duplicated inside function)
+                setImmediate(() => triggerInstantEmail(registrationId, 'WEBHOOK_SUCCESS'));
             }
         }
 
+        // Handle FAILURE
+        if (event === 'payment.failed') {
+            const registration = await Registration.findById(registrationId);
+
+            // Only mark as failed if it's currently pending (don't overwrite a success if it happened weirdly out of order)
+            if (registration && registration.paymentStatus === PAYMENT_STATUS.PENDING) {
+                registration.paymentStatus = PAYMENT_STATUS.FAILED;
+                registration.failureReason = payment.error_description || 'Payment rejected by bank or gateway';
+                registration.failureCode = payment.error_code || 'PAYMENT_FAILED';
+                registration.razorpayPaymentId = payment.id;
+                registration.razorpayOrderId = payment.order_id;
+                await registration.save();
+
+                console.log('❌ WEBHOOK: Payment Failed recorded for:', registrationId, '-', registration.failureReason);
+            }
+        }
+
+        // Always return 200 to Razorpay
         return res.status(200).json({ success: true, message: 'Webhook processed' });
 
     } catch (error) {
-        console.error('Error processing webhook:', error);
+        console.error('🔥 WEBHOOK: Internal processing error:', error);
+        // Still return 200 so Razorpay doesn't keep retrying if it's a code error on our side
         return res.status(200).json({ success: false, message: 'Internal error' });
     }
 };

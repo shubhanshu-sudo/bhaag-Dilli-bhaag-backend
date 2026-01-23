@@ -8,7 +8,7 @@ const RACE_CONFIG = {
         raceKey: '2KM',
         title: 'Fun Run',
         distance: '2 KM',
-        price: 499,
+        price: 15,
         minAge: 10,
         maxAge: null
     },
