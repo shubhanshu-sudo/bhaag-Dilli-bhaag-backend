@@ -1,4 +1,5 @@
 const PDFDocument = require('pdfkit');
+const path = require('path');
 
 /**
  * Invoice Generator for Bhaag Dilli Bhaag
@@ -20,6 +21,9 @@ const generateInvoice = (registration) => {
                 margin: 50
             });
 
+            // Logo path support for both local dev and production
+            const logoPath = path.join(process.cwd(), '..', 'my-app', 'public', 'Untitled-1-01.webp');
+
             // Collect PDF data in buffer
             const buffers = [];
             doc.on('data', buffers.push.bind(buffers));
@@ -33,14 +37,20 @@ const generateInvoice = (registration) => {
             doc.rect(0, 0, doc.page.width, 150).fill('#1e3a8a');
 
             // Event Logo/Title
-            doc.fontSize(32)
-                .fillColor('#ffffff')
-                .font('Helvetica-Bold')
-                .text('Bhaag Dilli Bhaag', 50, 40);
+            try {
+                // Add logo image
+                doc.image(logoPath, 50, 40, { height: 60 });
+            } catch (err) {
+                // Fallback to text if image fails
+                doc.fontSize(32)
+                    .fillColor('#ffffff')
+                    .font('Helvetica-Bold')
+                    .text('Bhaag Dilli Bhaag', 50, 40);
+            }
 
-            doc.fontSize(14)
+            doc.fontSize(12)
                 .fillColor('#eab308')
-                .text('Registration Invoice', 50, 80);
+                .text('Registration Invoice', 50, 105);
 
             // Invoice Info
             doc.fontSize(10)

@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const path = require('path');
 
 /**
  * Email Service for Bhaag Dilli Bhaag
@@ -32,6 +33,7 @@ const createTransporter = () => {
 const sendRegistrationConfirmation = async (registration, invoicePDF) => {
     try {
         const transporter = createTransporter();
+        const logoPath = path.join(process.cwd(), '..', 'my-app', 'public', 'Untitled-1-01.webp');
 
         // Email content
         const mailOptions = {
@@ -78,16 +80,21 @@ const sendRegistrationConfirmation = async (registration, invoicePDF) => {
             text-align: center;
             color: #ffffff;
         }
+        .header img {
+            max-height: 80px;
+            width: auto;
+            margin-bottom: 10px;
+        }
         .header h1 {
             margin: 0;
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 800;
             letter-spacing: -0.025em;
             text-transform: uppercase;
         }
         .header p {
             margin: 8px 0 0;
-            font-size: 16px;
+            font-size: 14px;
             opacity: 0.9;
         }
         /* Content */
@@ -237,7 +244,7 @@ const sendRegistrationConfirmation = async (registration, invoicePDF) => {
         <div class="container">
             <!-- Header -->
             <div class="header">
-                <h1>🏃‍♂️ Bhaag Dilli Bhaag</h1>
+                <img src="cid:eventlogo" alt="Bhaag Dilli Bhaag Logo">
                 <p>Registration Official Confirmation</p>
             </div>
 
@@ -311,6 +318,11 @@ const sendRegistrationConfirmation = async (registration, invoicePDF) => {
 </html>
             `,
             attachments: [
+                {
+                    filename: 'logo.webp',
+                    path: logoPath,
+                    cid: 'eventlogo' // same cid value as in the html img src
+                },
                 {
                     filename: `Invoice_${registration._id}.pdf`,
                     content: invoicePDF,
