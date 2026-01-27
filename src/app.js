@@ -6,15 +6,17 @@ const app = express();
 // CORS Configuration
 const corsOptions = {
     origin: [
-        'http://localhost:3000',           // Local development
-        'http://localhost:3001',           // Alternative local port
-        'https://bhaag-dilli-bhaag-8bd2.vercel.app', // Vercel production (no trailing slash)
-        'http://bhaag-dilli-bhaag-8bd2.vercel.app',  // Vercel http variant
-        // Add more frontend URLs as needed
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'https://bhaag-dilli-bhaag-8bd2.vercel.app',
+        'http://bhaag-dilli-bhaag-8bd2.vercel.app',
+        'https://www.bhaagdillibhaag.in',
+        'https://bhaagdillibhaag.in',
     ],
     credentials: true,
     optionsSuccessStatus: 200
 };
+
 
 // Middleware
 app.use(cors(corsOptions));
