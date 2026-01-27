@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createOrder, verifyPayment, handleWebhook, checkPaymentStatus, downloadInvoice, testEmail } = require('../controllers/payment.controller');
+const { createOrder, verifyPayment, handleWebhook, checkPaymentStatus, downloadInvoice, testEmail, getPriceBreakdown } = require('../controllers/payment.controller');
 
 /**
  * CRITICAL: Webhook route MUST use raw body for signature verification
@@ -116,5 +116,24 @@ router.get('/invoice/:registrationId', downloadInvoice);
  * @access  Public
  */
 router.get('/test-email/:registrationId', testEmail);
+
+/**
+ * @route   GET /api/payments/price-breakdown/:raceCategory
+ * @desc    Get payment breakdown showing registration fee, gateway charges, and total
+ * @access  Public
+ * 
+ * Response:
+ * {
+ *   "success": true,
+ *   "raceCategory": "2KM",
+ *   "breakdown": {
+ *     "registrationFee": 499,      // What merchant receives
+ *     "gatewayCharges": 12,        // Payment gateway fee
+ *     "totalPayable": 511,         // What user pays
+ *     "feePercentage": 2.36        // Fee percentage
+ *   }
+ * }
+ */
+router.get('/price-breakdown/:raceCategory', getPriceBreakdown);
 
 module.exports = router;

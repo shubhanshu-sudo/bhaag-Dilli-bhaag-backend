@@ -67,6 +67,18 @@ const registrationSchema = new mongoose.Schema({
         default: 0,
         min: [0, 'Amount cannot be negative']
     },
+    // Base registration amount (what merchant receives after Razorpay deduction)
+    baseAmount: {
+        type: Number,
+        default: null,
+        min: [0, 'Base amount cannot be negative']
+    },
+    // Total amount charged to user (includes gateway fee)
+    chargedAmount: {
+        type: Number,
+        default: null,
+        min: [0, 'Charged amount cannot be negative']
+    },
     paymentStatus: {
         type: String,
         enum: ['pending', 'paid', 'failed', 'abandoned', 'SUCCESS', 'FAILED', 'PENDING'],

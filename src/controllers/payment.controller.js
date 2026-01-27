@@ -2,7 +2,7 @@ const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { getRacePrice, isValidRaceCategory } = require('../config/raceConfig');
+const { getRacePrice, isValidRaceCategory, getPaymentBreakdown } = require('../config/raceConfig');
 const Registration = require('../models/Registration');
 const { generateInvoice } = require('../utils/invoiceGenerator');
 const { sendRegistrationConfirmation } = require('../utils/emailService');
@@ -60,7 +60,7 @@ const triggerInstantEmail = async (registrationId, source = 'UNKNOWN') => {
 
 /**
  * @route   POST /api/payments/create-order
- * @desc    Create Razorpay order with backend-determined pricing
+ * @desc    Create Razorpay order with backend-determined pricing (includes gateway fee)
  */
 const createOrder = async (req, res) => {
     try {
@@ -80,25 +80,37 @@ const createOrder = async (req, res) => {
             });
         }
 
-        const amount = getRacePrice(raceCategory);
+        // Get payment breakdown (base amount + gateway fee)
+        const paymentBreakdown = getPaymentBreakdown(raceCategory);
+        const { baseAmount, gatewayFee, chargedAmount } = paymentBreakdown;
+
         const receiptId = `receipt_${raceCategory}_${Date.now()}`;
 
         const options = {
-            amount: amount * 100, // paise
+            amount: chargedAmount * 100, // paise (charged amount includes gateway fee)
             currency: 'INR',
             receipt: receiptId,
             notes: {
                 registrationId: registrationId,
-                raceCategory: raceCategory
+                raceCategory: raceCategory,
+                baseAmount: baseAmount,
+                gatewayFee: gatewayFee,
+                chargedAmount: chargedAmount
             }
         };
 
         const order = await razorpay.orders.create(options);
 
+        console.log(`💰 Order created: Base ₹${baseAmount} + Fee ₹${gatewayFee} = Total ₹${chargedAmount}`);
+
         return res.status(200).json({
             success: true,
             orderId: order.id,
-            amount: amount,
+            // Payment breakdown for frontend display
+            baseAmount: baseAmount,           // Registration fee (what merchant receives)
+            gatewayFee: gatewayFee,           // Payment gateway charges
+            chargedAmount: chargedAmount,     // Total charged to user
+            amount: chargedAmount,            // For backward compatibility
             currency: order.currency,
             receipt: order.receipt,
             raceCategory: raceCategory
@@ -116,7 +128,7 @@ const createOrder = async (req, res) => {
 
 /**
  * @route   POST /api/payments/verify-payment
- * @desc    Verify Razorpay payment signature
+ * @desc    Verify Razorpay payment signature and update registration with payment amounts
  */
 const verifyPayment = async (req, res) => {
     try {
@@ -142,24 +154,47 @@ const verifyPayment = async (req, res) => {
         }
 
         if (registrationId) {
+            // Fetch order details from Razorpay to get the payment amounts
+            let baseAmount, chargedAmount;
+            try {
+                const order = await razorpay.orders.fetch(razorpay_order_id);
+                // Amount is in paise, convert to rupees
+                chargedAmount = order.amount / 100;
+                baseAmount = order.notes?.baseAmount ? parseInt(order.notes.baseAmount) : chargedAmount;
+            } catch (orderError) {
+                console.error('Error fetching order details:', orderError);
+                // Fallback to just chargedAmount if order fetch fails
+                chargedAmount = null;
+                baseAmount = null;
+            }
+
             // CRITICAL: Update status to 'paid' immediately upon signature verification
             // This provides the "Instant" feedback the user wants
+            const updateData = {
+                paymentStatus: 'paid',
+                razorpayOrderId: razorpay_order_id,
+                razorpayPaymentId: razorpay_payment_id,
+                paymentDate: new Date(),
+                step: 'completed'
+            };
+
+            // Add amounts if fetched successfully
+            if (baseAmount !== null) {
+                updateData.baseAmount = baseAmount;
+            }
+            if (chargedAmount !== null) {
+                updateData.chargedAmount = chargedAmount;
+            }
+
             const registration = await Registration.findByIdAndUpdate(
                 registrationId,
-                {
-                    $set: {
-                        paymentStatus: 'paid',
-                        razorpayOrderId: razorpay_order_id,
-                        razorpayPaymentId: razorpay_payment_id,
-                        paymentDate: new Date(),
-                        step: 'completed'
-                    }
-                },
+                { $set: updateData },
                 { new: true }
             );
 
             if (registration) {
-                console.log('✅ INSTANT POS: Signature verified, marking as paid:', registrationId);
+                console.log(`✅ INSTANT POS: Signature verified, marking as paid: ${registrationId}`);
+                console.log(`   💵 Base: ₹${baseAmount}, Charged: ₹${chargedAmount}`);
 
                 // TRIGGER EMAIL FLOW IMMEDIATELY
                 setImmediate(() => triggerInstantEmail(registrationId, 'VERIFY_PAYMENT'));
@@ -236,9 +271,22 @@ const handleWebhook = async (req, res) => {
                 registration.razorpayOrderId = payment.order_id;
                 registration.paymentDate = new Date();
                 registration.step = 'completed';
+
+                // Store payment amounts from notes (set during order creation)
+                if (payment.notes?.baseAmount) {
+                    registration.baseAmount = parseInt(payment.notes.baseAmount);
+                }
+                if (payment.notes?.chargedAmount) {
+                    registration.chargedAmount = parseInt(payment.notes.chargedAmount);
+                } else if (payment.amount) {
+                    // Fallback: use payment amount (in paise, convert to rupees)
+                    registration.chargedAmount = payment.amount / 100;
+                }
+
                 await registration.save();
 
                 console.log('✅ WEBHOOK: Payment Success confirmed for:', registrationId);
+                console.log(`   💵 Base: ₹${registration.baseAmount}, Charged: ₹${registration.chargedAmount}`);
 
                 // Trigger email (de-duplicated inside function)
                 setImmediate(() => triggerInstantEmail(registrationId, 'WEBHOOK_SUCCESS'));
@@ -289,7 +337,9 @@ const checkPaymentStatus = async (req, res) => {
             paymentStatus: registration.paymentStatus,
             razorpayOrderId: registration.razorpayOrderId,
             razorpayPaymentId: registration.razorpayPaymentId,
-            paymentDate: registration.paymentDate
+            paymentDate: registration.paymentDate,
+            baseAmount: registration.baseAmount,       // Registration fee
+            chargedAmount: registration.chargedAmount  // Total charged (includes gateway fee)
         });
     } catch (error) {
         return res.status(500).json({ success: false, message: 'Error' });
@@ -345,11 +395,48 @@ const testEmail = async (req, res) => {
     }
 };
 
+/**
+ * @route   GET /api/payments/price-breakdown/:raceCategory
+ * @desc    Get payment breakdown showing base amount, gateway fee, and total charged
+ */
+const getPriceBreakdown = async (req, res) => {
+    try {
+        const { raceCategory } = req.params;
+
+        if (!isValidRaceCategory(raceCategory)) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid race category: ${raceCategory}`
+            });
+        }
+
+        const breakdown = getPaymentBreakdown(raceCategory);
+
+        return res.status(200).json({
+            success: true,
+            raceCategory: raceCategory,
+            breakdown: {
+                registrationFee: breakdown.baseAmount,      // What merchant receives
+                gatewayCharges: breakdown.gatewayFee,       // Payment gateway fee
+                totalPayable: breakdown.chargedAmount,       // What user pays
+                feePercentage: breakdown.feePercentage       // Fee percentage for display
+            }
+        });
+    } catch (error) {
+        console.error('Error getting price breakdown:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to get price breakdown'
+        });
+    }
+};
+
 module.exports = {
     createOrder,
     verifyPayment,
     handleWebhook,
     checkPaymentStatus,
     downloadInvoice,
-    testEmail
+    testEmail,
+    getPriceBreakdown
 };

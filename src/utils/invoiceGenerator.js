@@ -164,41 +164,95 @@ const generateInvoice = (registration) => {
 
             yPosition += 15;
 
-            // Amount Section (highlighted) - Using column layout
-            const boxHeight = 70;
+            // Payment Breakdown Section (highlighted box with itemized breakdown)
+            // Read amounts from database - use stored values, don't calculate
+            const baseAmount = registration.baseAmount || registration.amount || 0;
+            const chargedAmount = registration.chargedAmount || registration.amount || 0;
+            const gatewayFee = chargedAmount - baseAmount;
+
+            const boxHeight = gatewayFee > 0 ? 110 : 70;
             doc.rect(50, yPosition, doc.page.width - 100, boxHeight)
                 .fillAndStroke('#f0f9ff', '#3b82f6');
 
-            // Title
+            // Section Title
             doc.fontSize(11)
                 .fillColor('#1e40af')
                 .font('Helvetica-Bold')
-                .text('TOTAL AMOUNT PAID', 0, yPosition + 12, {
-                    width: doc.page.width,
-                    align: 'center'
-                });
+                .text('PAYMENT SUMMARY', 60, yPosition + 12);
 
-            // Amount - Format as integer and use Rs. to avoid symbol issues
-            const formattedAmount = Math.round(registration.amount);
+            let paymentY = yPosition + 30;
 
-            doc.fontSize(32)
-                .fillColor('#1e3a8a')
-                .font('Helvetica-Bold')
-                .text(`Rs. ${formattedAmount}`, 0, yPosition + 28, {
-                    width: doc.page.width,
-                    align: 'center'
-                });
+            // Only show breakdown if gateway fee > 0, otherwise show simple total
+            if (gatewayFee > 0) {
+                // Registration Fee row
+                doc.fontSize(10)
+                    .fillColor('#374151')
+                    .font('Helvetica')
+                    .text('Registration Fee', 60, paymentY);
+                doc.fontSize(10)
+                    .fillColor('#374151')
+                    .font('Helvetica-Bold')
+                    .text(`Rs. ${Math.round(baseAmount)}`, doc.page.width - 150, paymentY, { width: 100, align: 'right' });
 
-            // Subtitle
-            doc.fontSize(8)
-                .fillColor('#6b7280')
-                .font('Helvetica')
-                .text('(Indian Rupees)', 0, yPosition + boxHeight - 12, {
-                    width: doc.page.width,
-                    align: 'center'
-                });
+                paymentY += 18;
 
-            yPosition += boxHeight + 15;
+                // Payment Gateway Charges row
+                doc.fontSize(10)
+                    .fillColor('#374151')
+                    .font('Helvetica')
+                    .text('Payment Gateway Charges', 60, paymentY);
+                doc.fontSize(10)
+                    .fillColor('#374151')
+                    .font('Helvetica-Bold')
+                    .text(`Rs. ${Math.round(gatewayFee)}`, doc.page.width - 150, paymentY, { width: 100, align: 'right' });
+
+                paymentY += 15;
+
+                // Divider line
+                doc.strokeColor('#93c5fd')
+                    .lineWidth(1)
+                    .moveTo(60, paymentY)
+                    .lineTo(doc.page.width - 60, paymentY)
+                    .stroke();
+
+                paymentY += 10;
+
+                // Total Amount Paid row
+                doc.fontSize(13)
+                    .fillColor('#1e3a8a')
+                    .font('Helvetica-Bold')
+                    .text('Total Amount Paid', 60, paymentY);
+                doc.fontSize(16)
+                    .fillColor('#1e3a8a')
+                    .font('Helvetica-Bold')
+                    .text(`Rs. ${Math.round(chargedAmount)}`, doc.page.width - 150, paymentY - 2, { width: 100, align: 'right' });
+            } else {
+                // Simple display for legacy invoices without breakdown
+                doc.fontSize(13)
+                    .fillColor('#1e3a8a')
+                    .font('Helvetica-Bold')
+                    .text('Total Amount Paid', 60, paymentY);
+                doc.fontSize(22)
+                    .fillColor('#1e3a8a')
+                    .font('Helvetica-Bold')
+                    .text(`Rs. ${Math.round(chargedAmount)}`, doc.page.width - 150, paymentY - 2, { width: 100, align: 'right' });
+            }
+
+            yPosition += boxHeight + 10;
+
+            // Razorpay deductions note (only show if there's a gateway fee)
+            if (gatewayFee > 0) {
+                doc.fontSize(8)
+                    .fillColor('#6b7280')
+                    .font('Helvetica-Oblique')
+                    .text(
+                        'Note: Payment gateway charges are collected to cover transaction processing fees. Razorpay deducts applicable charges before settlement.',
+                        50,
+                        yPosition,
+                        { width: doc.page.width - 100, align: 'left' }
+                    );
+                yPosition += 25;
+            }
 
             // Footer
             const footerY = doc.page.height - 100;
