@@ -8,8 +8,8 @@ const RACE_CONFIG = {
         raceKey: '2KM',
         title: 'Fun Run',
         distance: '2 KM',
-        price: 15,
-        minAge: 10,
+        price: 499,
+        minAge: 9,
         maxAge: null
     },
     '5KM': {
@@ -17,7 +17,7 @@ const RACE_CONFIG = {
         title: 'Fitness Run',
         distance: '5 KM',
         price: 699,
-        minAge: 10,
+        minAge: 9,
         maxAge: null
     },
     '10KM': {
@@ -25,7 +25,7 @@ const RACE_CONFIG = {
         title: 'Endurance Run',
         distance: '10 KM',
         price: 1199,
-        minAge: 15,
+        minAge: 9,
         maxAge: null
     }
 };
