@@ -33,7 +33,7 @@ const createTransporter = () => {
 const sendRegistrationConfirmation = async (registration, invoicePDF) => {
     try {
         const transporter = createTransporter();
-        const logoPath = path.join(process.cwd(), '..', 'bhaag_Dilli_bhaag', 'public', 'logo.png');
+        const logoPath = path.join(process.cwd(), '..', 'bhaag_Dilli_bhaag', 'public', 'Untitled-1-01.webp');
 
         // Read amounts from database - use stored values, don't calculate
         const baseAmount = registration.baseAmount || registration.amount || 0;
@@ -193,7 +193,7 @@ const sendRegistrationConfirmation = async (registration, invoicePDF) => {
             `,
             attachments: [
                 {
-                    filename: 'logo.png',
+                    filename: 'Untitled-1-01.webp',
                     path: logoPath,
                     cid: 'eventlogo' // same cid value as in the html img src
                 },

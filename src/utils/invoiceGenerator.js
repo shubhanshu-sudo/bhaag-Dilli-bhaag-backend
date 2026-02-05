@@ -22,7 +22,7 @@ const generateInvoice = (registration) => {
             });
 
             // Logo path support for both local dev and production
-            const logoPath = path.join(process.cwd(), '..', 'my-app', 'public', 'Untitled-1-01.webp');
+            const logoPath = path.join(process.cwd(), '..', 'bhaag_Dilli_bhaag', 'public', 'Untitled-1-01.webp');
 
             // Collect PDF data in buffer
             const buffers = [];
