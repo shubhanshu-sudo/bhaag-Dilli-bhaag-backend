@@ -6,6 +6,7 @@ const { getRacePrice, isValidRaceCategory, getPaymentBreakdown } = require('../c
 const Registration = require('../models/Registration');
 const { generateInvoice } = require('../utils/invoiceGenerator');
 const { sendRegistrationConfirmation } = require('../utils/emailService');
+const Coupon = require('../models/Coupon');
 
 // Initialize Razorpay instance
 const razorpay = new Razorpay({
@@ -59,12 +60,46 @@ const triggerInstantEmail = async (registrationId, source = 'UNKNOWN') => {
 };
 
 /**
+ * Helper to increment coupon usage count safely
+ */
+const incrementCouponUsage = async (couponCode) => {
+    if (!couponCode) return;
+    try {
+        await Coupon.findOneAndUpdate(
+            { code: couponCode.toUpperCase() },
+            {
+                $inc: {
+                    usageCount: 1,
+                    reservedCount: -1
+                }
+            }
+        );
+        console.log(`🎟️ Coupon usage updated: ${couponCode} (Usage: +1, Reserved: -1)`);
+    } catch (error) {
+        console.error(`❌ Error updating coupon ${couponCode}:`, error);
+    }
+};
+
+const releaseCouponLock = async (couponCode) => {
+    if (!couponCode) return;
+    try {
+        await Coupon.findOneAndUpdate(
+            { code: couponCode.toUpperCase() },
+            { $inc: { reservedCount: -1 } }
+        );
+        console.log(`🔓 Coupon lock released: ${couponCode} (Reserved: -1)`);
+    } catch (error) {
+        console.error(`❌ Error releasing coupon lock for ${couponCode}:`, error);
+    }
+};
+
+/**
  * @route   POST /api/payments/create-order
  * @desc    Create Razorpay order with backend-determined pricing (includes gateway fee)
  */
 const createOrder = async (req, res) => {
     try {
-        const { raceCategory, registrationId } = req.body;
+        const { raceCategory, registrationId, couponCode } = req.body;
 
         if (!raceCategory || !registrationId) {
             return res.status(400).json({
@@ -80,37 +115,95 @@ const createOrder = async (req, res) => {
             });
         }
 
-        // Get payment breakdown (base amount + gateway fee)
+        // Get payment breakdown (original base amount + gateway fee)
         const paymentBreakdown = getPaymentBreakdown(raceCategory);
-        const { baseAmount, gatewayFee, chargedAmount } = paymentBreakdown;
+
+        // STEP 1: baseAmount = registration fee
+        const baseAmount = paymentBreakdown.baseAmount;
+        const gatewayCharges = paymentBreakdown.gatewayFee;
+
+        // STEP 2: discountAmount = baseAmount * (discountValue / 100)
+        // STEP 3: discountedAmount = baseAmount - discountAmount
+        let discountAmount = 0;
+        let discountedAmount = baseAmount;
+        let appliedCode = null;
+
+        if (couponCode) {
+            const coupon = await Coupon.findOne({ code: couponCode.toUpperCase().trim() });
+
+            // Revalidate coupon on server
+            if (coupon && coupon.isActive && (!coupon.expiresAt || new Date(coupon.expiresAt) >= new Date())) {
+
+                // CONCURRENCY CHECK: Prevent over-subscription
+                if (coupon.maxUsage !== null) {
+                    const totalUsedAndReserved = coupon.usageCount + (coupon.reservedCount || 0);
+                    if (totalUsedAndReserved >= coupon.maxUsage) {
+                        return res.status(400).json({
+                            success: false,
+                            message: 'This coupon has reached its maximum usage limit (including ongoing payments)'
+                        });
+                    }
+                }
+
+                appliedCode = coupon.code;
+                discountAmount = Math.floor(baseAmount * (coupon.discountValue / 100));
+                discountedAmount = baseAmount - discountAmount;
+
+                // LOCK/RESERVE the coupon: Increment reservedCount
+                await Coupon.findByIdAndUpdate(coupon._id, { $inc: { reservedCount: 1 } });
+
+                // Update registration with coupon used
+                await Registration.findByIdAndUpdate(registrationId, {
+                    $set: { couponCode: appliedCode }
+                });
+            } else if (couponCode) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Coupon is invalid, expired, or deactivated'
+                });
+            }
+        }
+
+        // STEP 4: finalAmount = discountedAmount + gatewayCharges
+        // Rule: Gateway charges must never be discounted
+        // Rule: Final amount must be rounded correctly
+        const finalAmount = Math.round(discountedAmount + gatewayCharges);
 
         const receiptId = `receipt_${raceCategory}_${Date.now()}`;
 
         const options = {
-            amount: chargedAmount * 100, // paise (charged amount includes gateway fee)
+            amount: finalAmount * 100, // paise
             currency: 'INR',
             receipt: receiptId,
             notes: {
                 registrationId: registrationId,
                 raceCategory: raceCategory,
-                baseAmount: baseAmount,
-                gatewayFee: gatewayFee,
-                chargedAmount: chargedAmount
+                baseAmount: discountedAmount,
+                originalBase: baseAmount,
+                gatewayFee: gatewayCharges,
+                chargedAmount: finalAmount,
+                couponCode: appliedCode || null,
+                discountAmount: discountAmount
             }
         };
 
         const order = await razorpay.orders.create(options);
 
-        console.log(`💰 Order created: Base ₹${baseAmount} + Fee ₹${gatewayFee} = Total ₹${chargedAmount}`);
+        console.log(`💰 [BACKEND SOURCE OF TRUTH] Order created: ₹${baseAmount} (Base) - ₹${discountAmount} (Disc) + ₹${gatewayCharges} (Fee) = Total ₹${finalAmount}`);
 
         return res.status(200).json({
             success: true,
             orderId: order.id,
-            // Payment breakdown for frontend display
-            baseAmount: baseAmount,           // Registration fee (what merchant receives)
-            gatewayFee: gatewayFee,           // Payment gateway charges
-            chargedAmount: chargedAmount,     // Total charged to user
-            amount: chargedAmount,            // For backward compatibility
+            paymentSummary: {
+                baseAmount: baseAmount,
+                discountAmount: discountAmount,
+                discountedAmount: discountedAmount,
+                gatewayCharges: gatewayCharges,
+                finalPayableAmount: finalAmount,
+                couponCode: appliedCode
+            },
+            // Legacy fields for backward compatibility if any
+            amount: finalAmount,
             currency: order.currency,
             receipt: order.receipt,
             raceCategory: raceCategory
@@ -122,6 +215,33 @@ const createOrder = async (req, res) => {
             success: false,
             message: 'Failed to create payment order',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+/**
+ * @route   POST /api/payments/cancel-order
+ * @desc    Cancel an order and release coupon lock
+ */
+const cancelOrder = async (req, res) => {
+    try {
+        const { orderId, couponCode } = req.body;
+
+        if (couponCode) {
+            await releaseCouponLock(couponCode);
+        }
+
+        console.log(`⏹️ Order cancelled/abandoned: ${orderId || 'Unknown'}`);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Order cancelled and resources released'
+        });
+    } catch (error) {
+        console.error('Error cancelling order:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to cancel order'
         });
     }
 };
@@ -198,6 +318,11 @@ const verifyPayment = async (req, res) => {
 
                 // TRIGGER EMAIL FLOW IMMEDIATELY
                 setImmediate(() => triggerInstantEmail(registrationId, 'VERIFY_PAYMENT'));
+
+                // INCREMENT COUPON USAGE IF APPLICABLE
+                if (registration.couponCode) {
+                    setImmediate(() => incrementCouponUsage(registration.couponCode));
+                }
             }
         }
 
@@ -283,6 +408,10 @@ const handleWebhook = async (req, res) => {
                     registration.chargedAmount = payment.amount / 100;
                 }
 
+                if (payment.notes?.couponCode) {
+                    registration.couponCode = payment.notes.couponCode.toUpperCase().trim();
+                }
+
                 await registration.save();
 
                 console.log('✅ WEBHOOK: Payment Success confirmed for:', registrationId);
@@ -290,6 +419,11 @@ const handleWebhook = async (req, res) => {
 
                 // Trigger email (de-duplicated inside function)
                 setImmediate(() => triggerInstantEmail(registrationId, 'WEBHOOK_SUCCESS'));
+
+                // INCREMENT COUPON USAGE IF APPLICABLE
+                if (registration.couponCode) {
+                    setImmediate(() => incrementCouponUsage(registration.couponCode));
+                }
             }
         }
 
@@ -307,6 +441,11 @@ const handleWebhook = async (req, res) => {
                 await registration.save();
 
                 console.log('❌ WEBHOOK: Payment Failed recorded for:', registrationId, '-', registration.failureReason);
+
+                // RELEASE COUPON LOCK IF APPLICABLE
+                if (payment.notes?.couponCode) {
+                    setImmediate(() => releaseCouponLock(payment.notes.couponCode));
+                }
             }
         }
 
@@ -415,6 +554,15 @@ const getPriceBreakdown = async (req, res) => {
         return res.status(200).json({
             success: true,
             raceCategory: raceCategory,
+            paymentSummary: {
+                baseAmount: breakdown.baseAmount,
+                discountAmount: 0,
+                discountedAmount: breakdown.baseAmount,
+                gatewayCharges: breakdown.gatewayFee,
+                finalPayableAmount: breakdown.chargedAmount,
+                couponCode: null
+            },
+            // Legacy breakdown field for compatibility
             breakdown: {
                 registrationFee: breakdown.baseAmount,      // What merchant receives
                 gatewayCharges: breakdown.gatewayFee,       // Payment gateway fee
@@ -433,6 +581,7 @@ const getPriceBreakdown = async (req, res) => {
 
 module.exports = {
     createOrder,
+    cancelOrder,
     verifyPayment,
     handleWebhook,
     checkPaymentStatus,

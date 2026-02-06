@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { createOrder, verifyPayment, handleWebhook, checkPaymentStatus, downloadInvoice, testEmail, getPriceBreakdown } = require('../controllers/payment.controller');
+const { createOrder, cancelOrder, verifyPayment, handleWebhook, checkPaymentStatus, downloadInvoice, testEmail, getPriceBreakdown } = require('../controllers/payment.controller');
 
 /**
  * CRITICAL: Webhook route MUST use raw body for signature verification
@@ -61,6 +61,7 @@ router.use(express.json());
  * }
  */
 router.post('/create-order', createOrder);
+router.post('/cancel-order', cancelOrder);
 
 /**
  * @route   POST /api/payments/verify-payment

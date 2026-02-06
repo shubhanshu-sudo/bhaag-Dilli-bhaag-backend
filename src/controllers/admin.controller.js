@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const Admin = require('../models/Admin');
 const Registration = require('../models/Registration');
+const Coupon = require('../models/Coupon');
 
 /**
  * @desc    Admin login
@@ -257,9 +258,215 @@ const getDashboardStats = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Create a new coupon
+ * @route   POST /api/admin/coupons
+ * @access  Private (Admin only)
+ */
+const createCoupon = async (req, res) => {
+    try {
+        const { code, discountValue, isActive } = req.body;
+
+        // Validation
+        if (!code) {
+            return res.status(400).json({
+                success: false,
+                message: 'Coupon code is required'
+            });
+        }
+
+        const couponCode = code.toUpperCase().trim();
+
+        // Length validation (5-12 characters)
+        if (couponCode.length < 5 || couponCode.length > 12) {
+            return res.status(400).json({
+                success: false,
+                message: 'Coupon code must be between 5 and 12 characters'
+            });
+        }
+
+        // Alpha-numeric validation (Only A-Z, 0-9)
+        const codeRegex = /^[A-Z0-9]+$/;
+        if (!codeRegex.test(couponCode)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Coupon code can only contain uppercase letters and numbers'
+            });
+        }
+
+        if (discountValue === undefined || discountValue === null) {
+            return res.status(400).json({
+                success: false,
+                message: 'Discount value is required'
+            });
+        }
+
+        if (discountValue > 20) {
+            return res.status(400).json({
+                success: false,
+                message: 'Discount value cannot exceed 20%'
+            });
+        }
+
+        // Check if coupon already exists
+        const existingCoupon = await Coupon.findOne({ code: couponCode });
+        if (existingCoupon) {
+            return res.status(400).json({
+                success: false,
+                message: 'Coupon code already exists'
+            });
+        }
+
+        // Create coupon
+        const coupon = await Coupon.create({
+            code: couponCode,
+            discountValue,
+            isActive: isActive !== undefined ? isActive : false,
+            discountType: 'PERCENT',
+            usageCount: 0
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'Coupon created successfully',
+            data: coupon
+        });
+
+    } catch (error) {
+        console.error('Create Coupon Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to create coupon'
+        });
+    }
+};
+
+const getCoupons = async (req, res) => {
+    try {
+        const coupons = await Coupon.find()
+            .sort({ createdAt: -1 })
+            .select('code discountValue isActive usageCount createdAt');
+
+        res.status(200).json({
+            success: true,
+            count: coupons.length,
+            data: coupons
+        });
+
+    } catch (error) {
+        console.error('Get Coupons Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch coupons'
+        });
+    }
+};
+
+const toggleCouponStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { isActive } = req.body;
+
+        if (isActive === undefined || isActive === null) {
+            return res.status(400).json({
+                success: false,
+                message: 'isActive status is required'
+            });
+        }
+
+        // Validate MongoDB ObjectId format
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid coupon ID format'
+            });
+        }
+
+        const coupon = await Coupon.findByIdAndUpdate(
+            id,
+            { isActive },
+            { new: true, runValidators: true }
+        );
+
+        if (!coupon) {
+            return res.status(404).json({
+                success: false,
+                message: 'Coupon not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Coupon ${isActive ? 'activated' : 'deactivated'} successfully`,
+            data: coupon
+        });
+
+    } catch (error) {
+        console.error('Toggle Coupon Status Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update coupon status'
+        });
+    }
+};
+
+/**
+ * @desc    Delete a coupon
+ * @route   DELETE /api/admin/coupons/:id
+ * @access  Private (Admin only)
+ */
+const deleteCoupon = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Validate MongoDB ObjectId format
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid coupon ID format'
+            });
+        }
+
+        const coupon = await Coupon.findById(id);
+
+        if (!coupon) {
+            return res.status(404).json({
+                success: false,
+                message: 'Coupon not found'
+            });
+        }
+
+        // Block deletion if coupon has been used
+        if (coupon.usageCount > 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot delete a coupon that has already been used'
+            });
+        }
+
+        await Coupon.findByIdAndDelete(id);
+
+        res.status(200).json({
+            success: true,
+            message: 'Coupon deleted successfully'
+        });
+
+    } catch (error) {
+        console.error('Delete Coupon Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to delete coupon'
+        });
+    }
+};
+
 module.exports = {
     adminLogin,
     getRegistrations,
     getRegistrationById,
-    getDashboardStats
+    getDashboardStats,
+    createCoupon,
+    getCoupons,
+    toggleCouponStatus,
+    deleteCoupon
 };
