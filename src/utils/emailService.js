@@ -12,10 +12,11 @@ const path = require('path');
 
 // Create reusable transporter
 const createTransporter = () => {
+    const port = parseInt(process.env.SMTP_PORT) || 587;
     return nodemailer.createTransport({
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: process.env.SMTP_PORT || 587,
-        secure: false, // true for 465, false for other ports
+        port: port,
+        secure: port === 465, // true for 465 (SSL), false for 587 (TLS)
         auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASS,
@@ -177,9 +178,9 @@ const sendRegistrationConfirmation = async (registration, invoicePDF) => {
 
                 <div class="footer">
                     <div><strong>Bhaag Dilli Bhaag 2026</strong></div>
-                    <div>1st March 2026 | Japanese Park, Rohini</div>
+                    <div>1st March 2026 | Sector-10, Rohini</div>
                     <div style="margin-top: 15px;">
-                        <a href="https://bhaag-dilli-bhaag-8bd2.vercel.app">Official Website</a>
+                        <a href="https://bhaagdillibhaag.in">Official Website</a>
                     </div>
                     <div style="margin-top: 15px; font-size: 10px; opacity: 0.6;">
                         &copy; 2026 Bhaag Dilli Bhaag. All rights reserved.
