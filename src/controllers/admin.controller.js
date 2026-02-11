@@ -301,10 +301,10 @@ const createCoupon = async (req, res) => {
             });
         }
 
-        if (discountValue > 20) {
+        if (discountValue > 100) {
             return res.status(400).json({
                 success: false,
-                message: 'Discount value cannot exceed 20%'
+                message: 'Discount value cannot exceed 100%'
             });
         }
 

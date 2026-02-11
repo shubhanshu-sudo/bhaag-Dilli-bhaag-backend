@@ -84,8 +84,8 @@ const validateCoupon = async (req, res) => {
         const discountAmount = Math.floor(finalBaseAmount * (discountValue / 100)); // Rounding down to nearest rupee
         const discountedAmount = Math.max(0, finalBaseAmount - discountAmount);
 
-        // Gateway charges remain unchanged (not discounted)
-        const gatewayCharges = breakdown.gatewayFee;
+        // Gateway charges remain unchanged (not discounted) EXCEPT for 100% discount
+        const gatewayCharges = discountValue === 100 ? 0 : breakdown.gatewayFee;
         const finalPayableAmount = Math.round(discountedAmount + gatewayCharges);
 
         return res.status(200).json({
