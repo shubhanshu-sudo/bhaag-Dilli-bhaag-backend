@@ -265,7 +265,7 @@ const getDashboardStats = async (req, res) => {
  */
 const createCoupon = async (req, res) => {
     try {
-        const { code, discountValue, isActive } = req.body;
+        const { code, discountValue, isActive, maxUsage, expiresAt } = req.body;
 
         // Validation
         if (!code) {
@@ -308,6 +308,20 @@ const createCoupon = async (req, res) => {
             });
         }
 
+        if (maxUsage !== undefined && maxUsage !== null && maxUsage !== '' && (isNaN(maxUsage) || maxUsage < 1)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Max usage must be a positive number'
+            });
+        }
+
+        if (expiresAt && new Date(expiresAt) < new Date(new Date().setHours(0, 0, 0, 0))) {
+            return res.status(400).json({
+                success: false,
+                message: 'Expiry date cannot be in the past'
+            });
+        }
+
         // Check if coupon already exists
         const existingCoupon = await Coupon.findOne({ code: couponCode });
         if (existingCoupon) {
@@ -322,6 +336,8 @@ const createCoupon = async (req, res) => {
             code: couponCode,
             discountValue,
             isActive: isActive !== undefined ? isActive : false,
+            maxUsage: (maxUsage && maxUsage !== '') ? Number(maxUsage) : null,
+            expiresAt: expiresAt || null,
             discountType: 'PERCENT',
             usageCount: 0
         });
@@ -345,7 +361,7 @@ const getCoupons = async (req, res) => {
     try {
         const coupons = await Coupon.find()
             .sort({ createdAt: -1 })
-            .select('code discountValue isActive usageCount createdAt');
+            .select('code discountValue isActive usageCount maxUsage expiresAt createdAt');
 
         res.status(200).json({
             success: true,
