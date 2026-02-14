@@ -25,6 +25,7 @@ app.use(cors(corsOptions));
 // Razorpay webhook requires RAW body for signature verification
 const paymentRoutes = require('./routes/payment.routes');
 app.use('/api/payments', paymentRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // NOW apply JSON parsing for all other routes
 app.use(express.json());
@@ -95,6 +96,8 @@ app.get('/health', (req, res) => {
 // API Routes (other routes with JSON parsing)
 app.use('/api/register', require('./routes/register.routes'));
 app.use('/api/admin', require('./routes/admin.routes'));
+app.use('/api/coupons', require('./routes/coupon.routes'));
+app.use('/api/coupon', require('./routes/coupon.routes'));
 
 // Root route
 app.get('/', (req, res) => {

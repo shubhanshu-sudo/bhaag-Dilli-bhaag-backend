@@ -5,7 +5,11 @@ const {
     adminLogin,
     getRegistrations,
     getRegistrationById,
-    getDashboardStats
+    getDashboardStats,
+    createCoupon,
+    getCoupons,
+    toggleCouponStatus,
+    deleteCoupon
 } = require('../controllers/admin.controller');
 
 /**
@@ -35,5 +39,33 @@ router.get('/registrations/:id', authMiddleware, getRegistrationById);
  * @access  Private (Admin only)
  */
 router.get('/stats', authMiddleware, getDashboardStats);
+
+/**
+ * @route   POST /api/admin/coupons
+ * @desc    Create a new coupon
+ * @access  Private (Admin only)
+ */
+router.post('/coupons', authMiddleware, createCoupon);
+
+/**
+ * @route   GET /api/admin/coupons
+ * @desc    Get all coupons
+ * @access  Private (Admin only)
+ */
+router.get('/coupons', authMiddleware, getCoupons);
+
+/**
+ * @route   PATCH /api/admin/coupons/:id/status
+ * @desc    Toggle coupon active status
+ * @access  Private (Admin only)
+ */
+router.patch('/coupons/:id/status', authMiddleware, toggleCouponStatus);
+
+/**
+ * @route   DELETE /api/admin/coupons/:id
+ * @desc    Delete a coupon
+ * @access  Private (Admin only)
+ */
+router.delete('/coupons/:id', authMiddleware, deleteCoupon);
 
 module.exports = router;

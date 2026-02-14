@@ -141,6 +141,12 @@ const registrationSchema = new mongoose.Schema({
         type: String,
         default: null
     },
+    couponCode: {
+        type: String,
+        trim: true,
+        uppercase: true,
+        default: null
+    },
 
     // Metadata
     createdAt: {
