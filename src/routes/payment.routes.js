@@ -61,6 +61,7 @@ router.use(express.json());
  * }
  */
 router.post('/create-order', createOrder);
+router.post('/complete-free-registration', require('../controllers/payment.controller').completeFreeRegistration);
 router.post('/cancel-order', cancelOrder);
 
 /**

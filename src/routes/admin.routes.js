@@ -9,6 +9,7 @@ const {
     createCoupon,
     getCoupons,
     toggleCouponStatus,
+    updateCoupon,
     deleteCoupon
 } = require('../controllers/admin.controller');
 
@@ -60,6 +61,13 @@ router.get('/coupons', authMiddleware, getCoupons);
  * @access  Private (Admin only)
  */
 router.patch('/coupons/:id/status', authMiddleware, toggleCouponStatus);
+
+/**
+ * @route   PUT /api/admin/coupons/:id
+ * @desc    Update a coupon
+ * @access  Private (Admin only)
+ */
+router.put('/coupons/:id', authMiddleware, updateCoupon);
 
 /**
  * @route   DELETE /api/admin/coupons/:id

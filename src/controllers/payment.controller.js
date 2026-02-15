@@ -165,11 +165,33 @@ const createOrder = async (req, res) => {
         }
 
         // STEP 4: finalAmount = discountedAmount + gatewayCharges
-        // Rule: Gateway charges must never be discounted
-        // Rule: Final amount must be rounded correctly
-        const finalAmount = Math.round(discountedAmount + gatewayCharges);
+        // Rule: Gateway charges must never be discounted (EXCEPT for 100% coupons)
+        const finalGatewayCharges = (appliedCode && discountedAmount === 0 && discountAmount > 0) ? 0 : gatewayCharges;
+        const finalAmount = Math.round(discountedAmount + finalGatewayCharges);
 
         const receiptId = `receipt_${raceCategory}_${Date.now()}`;
+
+        // CRITICAL: Razorpay does not allow creating orders with amount 0
+        if (finalAmount === 0) {
+            console.log(`🎁 [BACKEND] 100% Discount order: Skipping Razorpay for ${registrationId}`);
+            return res.status(200).json({
+                success: true,
+                orderId: 'FREE_' + Date.now(),
+                paymentSummary: {
+                    baseAmount: baseAmount,
+                    discountAmount: discountAmount,
+                    discountedAmount: discountedAmount,
+                    gatewayCharges: 0,
+                    finalPayableAmount: 0,
+                    couponCode: appliedCode
+                },
+                amount: 0,
+                currency: 'INR',
+                receipt: receiptId,
+                raceCategory: raceCategory,
+                isFree: true
+            });
+        }
 
         const options = {
             amount: finalAmount * 100, // paise
@@ -180,7 +202,7 @@ const createOrder = async (req, res) => {
                 raceCategory: raceCategory,
                 baseAmount: discountedAmount,
                 originalBase: baseAmount,
-                gatewayFee: gatewayCharges,
+                gatewayFee: finalGatewayCharges,
                 chargedAmount: finalAmount,
                 couponCode: appliedCode || null,
                 discountAmount: discountAmount
@@ -188,7 +210,7 @@ const createOrder = async (req, res) => {
         };
 
         const order = await razorpay.orders.create(options);
-
+        console.log(`📡 [BACKEND] Razorpay Order Created: ${order.id} for Amt: ₹${finalAmount}`);
         console.log(`💰 [BACKEND SOURCE OF TRUTH] Order created: ₹${baseAmount} (Base) - ₹${discountAmount} (Disc) + ₹${gatewayCharges} (Fee) = Total ₹${finalAmount}`);
 
         return res.status(200).json({
@@ -198,7 +220,7 @@ const createOrder = async (req, res) => {
                 baseAmount: baseAmount,
                 discountAmount: discountAmount,
                 discountedAmount: discountedAmount,
-                gatewayCharges: gatewayCharges,
+                gatewayCharges: finalGatewayCharges,
                 finalPayableAmount: finalAmount,
                 couponCode: appliedCode
             },
@@ -579,12 +601,108 @@ const getPriceBreakdown = async (req, res) => {
     }
 };
 
+/**
+ * @route   POST /api/payments/complete-free-registration
+ * @desc    Complete registration for 100% discount coupons (Zero amount)
+ */
+const completeFreeRegistration = async (req, res) => {
+    try {
+        const { registrationId, couponCode } = req.body;
+
+        if (!registrationId || !couponCode) {
+            return res.status(400).json({
+                success: false,
+                message: 'Registration ID and Coupon Code are required'
+            });
+        }
+
+        // 1. Fetch Coupon
+        const coupon = await Coupon.findOne({ code: couponCode.toUpperCase().trim() });
+
+        if (!coupon || !coupon.isActive || (coupon.expiresAt && new Date(coupon.expiresAt) < new Date())) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired coupon'
+            });
+        }
+
+        // 2. Verify it's a 100% coupon
+        if (coupon.discountValue !== 100) {
+            return res.status(400).json({
+                success: false,
+                message: 'This coupon does not provide a 100% discount'
+            });
+        }
+
+        // 3. Check usage limits
+        if (coupon.maxUsage !== null && coupon.usageCount >= coupon.maxUsage) {
+            return res.status(400).json({
+                success: false,
+                message: 'This coupon has reached its maximum usage limit'
+            });
+        }
+
+        // 4. Update Registration
+        const registration = await Registration.findById(registrationId);
+        if (!registration) {
+            return res.status(404).json({
+                success: false,
+                message: 'Registration not found'
+            });
+        }
+
+        if (registration.paymentStatus === 'paid') {
+            return res.status(400).json({
+                success: false,
+                message: 'Registration is already paid'
+            });
+        }
+
+        registration.paymentStatus = 'paid';
+        registration.paymentMethod = 'Coupon';
+        registration.paymentStatusDetails = 'Free - 100% Coupon Applied';
+        registration.couponCode = coupon.code;
+        registration.paymentDate = new Date();
+        registration.step = 'completed';
+        registration.baseAmount = 0;
+        registration.chargedAmount = 0;
+        registration.razorpayOrderId = 'FREE_' + Date.now();
+        registration.razorpayPaymentId = 'COUPON_' + coupon.code;
+
+        await registration.save();
+
+        console.log(`🎁 FREE REGISTRATION: 100% Coupon ${coupon.code} applied for ${registrationId}`);
+
+        // 5. Trigger email and increment usage
+        setImmediate(() => triggerInstantEmail(registrationId, 'FREE_COUPON_REGISTRATION'));
+
+        // Manual increment for free coupon (as we don't have reservedCount to decrement here)
+        await Coupon.findByIdAndUpdate(coupon._id, { $inc: { usageCount: 1 } });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Free registration completed successfully',
+            verified: true,
+            registrationId: registrationId
+        });
+
+    } catch (error) {
+        console.error('Error completing free registration:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to complete free registration',
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     createOrder,
     cancelOrder,
     verifyPayment,
     handleWebhook,
     checkPaymentStatus,
+    completeFreeRegistration,
     downloadInvoice,
     testEmail,
     getPriceBreakdown

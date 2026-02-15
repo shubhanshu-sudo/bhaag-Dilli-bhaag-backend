@@ -265,7 +265,7 @@ const getDashboardStats = async (req, res) => {
  */
 const createCoupon = async (req, res) => {
     try {
-        const { code, discountValue, isActive } = req.body;
+        const { code, discountValue, isActive, maxUsage, expiresAt } = req.body;
 
         // Validation
         if (!code) {
@@ -301,10 +301,24 @@ const createCoupon = async (req, res) => {
             });
         }
 
-        if (discountValue > 20) {
+        if (discountValue > 100) {
             return res.status(400).json({
                 success: false,
-                message: 'Discount value cannot exceed 20%'
+                message: 'Discount value cannot exceed 100%'
+            });
+        }
+
+        if (maxUsage !== undefined && maxUsage !== null && maxUsage !== '' && (isNaN(maxUsage) || maxUsage < 1)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Max usage must be a positive number'
+            });
+        }
+
+        if (expiresAt && new Date(expiresAt) < new Date(new Date().setHours(0, 0, 0, 0))) {
+            return res.status(400).json({
+                success: false,
+                message: 'Expiry date cannot be in the past'
             });
         }
 
@@ -322,6 +336,8 @@ const createCoupon = async (req, res) => {
             code: couponCode,
             discountValue,
             isActive: isActive !== undefined ? isActive : false,
+            maxUsage: (maxUsage && maxUsage !== '') ? Number(maxUsage) : null,
+            expiresAt: expiresAt || null,
             discountType: 'PERCENT',
             usageCount: 0
         });
@@ -345,7 +361,7 @@ const getCoupons = async (req, res) => {
     try {
         const coupons = await Coupon.find()
             .sort({ createdAt: -1 })
-            .select('code discountValue isActive usageCount createdAt');
+            .select('code discountValue isActive usageCount maxUsage expiresAt createdAt');
 
         res.status(200).json({
             success: true,
@@ -460,6 +476,121 @@ const deleteCoupon = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Update a coupon
+ * @route   PUT /api/admin/coupons/:id
+ * @access  Private (Admin only)
+ */
+const updateCoupon = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { code, discountValue, isActive, maxUsage, expiresAt } = req.body;
+
+        // Validate MongoDB ObjectId format
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid coupon ID format'
+            });
+        }
+
+        const coupon = await Coupon.findById(id);
+
+        if (!coupon) {
+            return res.status(404).json({
+                success: false,
+                message: 'Coupon not found'
+            });
+        }
+
+        // Prepare update data
+        const updateData = {};
+
+        if (code) {
+            const couponCode = code.toUpperCase().trim();
+            // Length validation
+            if (couponCode.length < 5 || couponCode.length > 12) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Coupon code must be between 5 and 12 characters'
+                });
+            }
+            // Alpha-numeric validation
+            const codeRegex = /^[A-Z0-9]+$/;
+            if (!codeRegex.test(couponCode)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Coupon code can only contain uppercase letters and numbers'
+                });
+            }
+            // Check if code is changed and if new code already exists
+            if (couponCode !== coupon.code) {
+                const existingCoupon = await Coupon.findOne({ code: couponCode });
+                if (existingCoupon) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'Coupon code already exists'
+                    });
+                }
+                updateData.code = couponCode;
+            }
+        }
+
+        if (discountValue !== undefined && discountValue !== null) {
+            if (discountValue > 100) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Discount value cannot exceed 100%'
+                });
+            }
+            updateData.discountValue = discountValue;
+        }
+
+        if (isActive !== undefined) {
+            updateData.isActive = isActive;
+        }
+
+        if (maxUsage !== undefined) {
+            if (maxUsage !== null && maxUsage !== '' && (isNaN(maxUsage) || maxUsage < 1)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Max usage must be a positive number'
+                });
+            }
+            updateData.maxUsage = (maxUsage && maxUsage !== '') ? Number(maxUsage) : null;
+        }
+
+        if (expiresAt !== undefined) {
+            if (expiresAt && new Date(expiresAt) < new Date(new Date().setHours(0, 0, 0, 0))) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Expiry date cannot be in the past'
+                });
+            }
+            updateData.expiresAt = expiresAt || null;
+        }
+
+        const updatedCoupon = await Coupon.findByIdAndUpdate(
+            id,
+            updateData,
+            { new: true, runValidators: true }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: 'Coupon updated successfully',
+            data: updatedCoupon
+        });
+
+    } catch (error) {
+        console.error('Update Coupon Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update coupon'
+        });
+    }
+};
+
 module.exports = {
     adminLogin,
     getRegistrations,
@@ -468,5 +599,6 @@ module.exports = {
     createCoupon,
     getCoupons,
     toggleCouponStatus,
+    updateCoupon,
     deleteCoupon
 };
