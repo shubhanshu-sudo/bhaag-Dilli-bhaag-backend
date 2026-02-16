@@ -11,21 +11,21 @@ const path = require('path');
  */
 
 // Create reusable transporter (Singleton with pooling for production)
+// Note: Render blocks 465/587. Using Port 2525 with a service like Brevo is highly recommended.
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 465,
-    secure: true, // TLS/SSL
+    host: process.env.SMTP_HOST || 'smtp-relay.brevo.com',
+    port: parseInt(process.env.SMTP_PORT) || 2525,
+    secure: false, // Port 2525 usually uses STARTTLS (secure: false)
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
-    // Cloud optimization
-    socketTimeout: 30000,
+    pool: true,
+    maxConnections: 3,
     connectionTimeout: 30000,
-    greetingTimeout: 30000,
+    socketTimeout: 30000,
     tls: {
-        // Essential for cloud providers that intercept traffic
-        servername: 'smtp.gmail.com',
+        // Essential for cloud handshake
         rejectUnauthorized: false
     }
 });
@@ -33,10 +33,11 @@ const transporter = nodemailer.createTransport({
 // Verify connection on startup
 transporter.verify((error, success) => {
     if (error) {
-        console.error('❌ SMTP Connection Error (Render Firewalled?):', error.message);
-        console.log('� Render.com often blocks direct SMTP ports. If this persists, switching to an API-based service (like Resend or SendGrid) is the only permanent fix.');
+        console.error('❌ SMTP Connection Error:', error.message);
+        console.log('💡 PRO TIP: If you are seeing Timeout, it means Render is blocking the port.');
+        console.log('💡 ACTION: Use Port 2525 with a service like Brevo/SendGrid.');
     } else {
-        console.log('🚀 SMTP Server is ready (Established via Port 465)');
+        console.log('🚀 SMTP Server is ready and connected!');
     }
 });
 
