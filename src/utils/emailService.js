@@ -11,25 +11,33 @@ const path = require('path');
  */
 
 // Create reusable transporter (Singleton with pooling for production)
-const port = parseInt(process.env.SMTP_PORT) || 587;
+const port = parseInt(process.env.SMTP_PORT) || 465; // Default to 465 for cloud
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    service: 'gmail', // Let nodemailer handle the details for Gmail
+    host: 'smtp.gmail.com',
     port: port,
-    secure: port === 465, // true for port 465, false for other ports
+    secure: port === 465, // true for 465
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
-    // Optimize for cloud environments like Render
-    pool: true, // Reuse connections
-    maxConnections: 5,
-    maxMessages: 100,
-    connectionTimeout: 10000, // 10 seconds
-    greetingTimeout: 10000,   // 10 seconds
-    socketTimeout: 30000,     // 30 seconds
+    pool: true,
+    maxConnections: 3,
+    connectionTimeout: 20000, // 20 seconds
+    greetingTimeout: 20000,
+    socketTimeout: 60000,
     tls: {
-        // Do not fail on invalid certs
-        rejectUnauthorized: false
+        rejectUnauthorized: false,
+        minVersion: 'TLSv1.2'
+    }
+});
+
+// Verify connection on startup
+transporter.verify((error, success) => {
+    if (error) {
+        console.error('❌ SMTP Connection Error:', error);
+    } else {
+        console.log('🚀 SMTP Server is ready to take our messages');
     }
 });
 
