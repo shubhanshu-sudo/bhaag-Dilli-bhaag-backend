@@ -11,24 +11,21 @@ const path = require('path');
  */
 
 // Create reusable transporter (Singleton with pooling for production)
-// FORCE Port 465 for Cloud Environment like Render
-const port = parseInt(process.env.SMTP_PORT) || 465;
+// Using 'service: gmail' is often more reliable on Render
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: port,
-    secure: true, // Force SSL
+    service: 'gmail',
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
-    // Production settings for high reliability
+    // Production settings for clouds
     pool: true,
     maxConnections: 3,
-    connectionTimeout: 30000, // 30 seconds
-    greetingTimeout: 30000,
+    connectionTimeout: 60000, // Increased to 60 seconds
+    greetingTimeout: 60000,
     socketTimeout: 60000,
-    debug: true, // Shows detailed logs in Render console
-    logger: true, // Logs full SMTP traffic
+    debug: true,
+    logger: true,
     tls: {
         rejectUnauthorized: false
     }
@@ -37,9 +34,10 @@ const transporter = nodemailer.createTransport({
 // Verify connection on startup
 transporter.verify((error, success) => {
     if (error) {
-        console.error('❌ SMTP Connection Error Details:', error);
+        console.error('❌ SMTP Connection Error Details (Render):', error);
+        console.log('💡 Tip: Check if Render IP is blocked by Gmail or if App Password is correct.');
     } else {
-        console.log('🚀 SMTP Server is ready (Port 465/SSL)');
+        console.log('🚀 SMTP Server via Gmail Service is ready');
     }
 });
 
