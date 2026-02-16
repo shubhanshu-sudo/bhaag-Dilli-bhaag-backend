@@ -71,7 +71,7 @@ const sendRegistrationConfirmation = async (registration, invoicePDF) => {
 
         // Email content
         const mailOptions = {
-            from: `"Bhaag Dilli Bhaag" <${process.env.SMTP_USER}>`,
+            from: `"Bhaag Dilli Bhaag" <info@bhaagdillibhaag.in>`,
             to: registration.email,
             subject: 'Payment Successful – Bhaag Dilli Bhaag Registration Confirmed',
             html: `
