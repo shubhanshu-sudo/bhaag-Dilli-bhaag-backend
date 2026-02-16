@@ -50,7 +50,7 @@ transporter.verify((error, success) => {
  */
 const sendRegistrationConfirmation = async (registration, invoicePDF) => {
     try {
-        const logoPath = path.join(process.cwd(), '..', 'bhaag_Dilli_bhaag', 'public', 'Untitled-1-01.webp');
+        const logoURL = `${process.env.FRONTEND_URL || 'https://bhaag-dilli-bhaag-8bd2.vercel.app'}/Untitled-1-01.webp`;
 
         // Read amounts from database - use stored values, don't calculate
         const baseAmount = registration.baseAmount || registration.amount || 0;
@@ -125,7 +125,7 @@ const sendRegistrationConfirmation = async (registration, invoicePDF) => {
             <div class="container">
                 <div class="header">
                     <div class="status-badge">✓ Payment Successful</div>
-                    <div><img src="cid:eventlogo" alt="Bhaag Dilli Bhaag Logo"></div>
+                    <div><img src="${logoURL}" alt="Bhaag Dilli Bhaag Logo" style="max-height: 85px; width: auto; margin-bottom: 20px;"></div>
                 </div>
 
                 <div class="content">
@@ -237,11 +237,6 @@ const sendRegistrationConfirmation = async (registration, invoicePDF) => {
 </html>
             `,
             attachments: [
-                {
-                    filename: 'Untitled-1-01.webp',
-                    path: logoPath,
-                    cid: 'eventlogo' // same cid value as in the html img src
-                },
                 {
                     filename: `Invoice_${registration._id}.pdf`,
                     content: invoicePDF,
