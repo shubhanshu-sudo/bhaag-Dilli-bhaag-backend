@@ -10,19 +10,28 @@ const path = require('path');
  * - Invoice delivery
  */
 
-// Create reusable transporter
-const createTransporter = () => {
-    const port = parseInt(process.env.SMTP_PORT) || 587;
-    return nodemailer.createTransport({
-        host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        port: port,
-        secure: port === 465, // true for 465 (SSL), false for 587 (TLS)
-        auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-        },
-    });
-};
+// Create reusable transporter (Singleton with pooling for production)
+const port = parseInt(process.env.SMTP_PORT) || 587;
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: port,
+    secure: port === 465, // true for port 465, false for other ports
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+    },
+    // Optimize for cloud environments like Render
+    pool: true, // Reuse connections
+    maxConnections: 5,
+    maxMessages: 100,
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,   // 10 seconds
+    socketTimeout: 30000,     // 30 seconds
+    tls: {
+        // Do not fail on invalid certs
+        rejectUnauthorized: false
+    }
+});
 
 /**
  * Send registration confirmation email with invoice
@@ -33,7 +42,6 @@ const createTransporter = () => {
  */
 const sendRegistrationConfirmation = async (registration, invoicePDF) => {
     try {
-        const transporter = createTransporter();
         const logoPath = path.join(process.cwd(), '..', 'bhaag_Dilli_bhaag', 'public', 'Untitled-1-01.webp');
 
         // Read amounts from database - use stored values, don't calculate
@@ -254,7 +262,6 @@ const sendRegistrationConfirmation = async (registration, invoicePDF) => {
  */
 const verifyEmailConfig = async () => {
     try {
-        const transporter = createTransporter();
         await transporter.verify();
         console.log('✅ Email server is ready');
         return true;
