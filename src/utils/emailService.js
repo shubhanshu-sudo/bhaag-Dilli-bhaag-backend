@@ -11,22 +11,21 @@ const path = require('path');
  */
 
 // Create reusable transporter (Singleton with pooling for production)
-// Using 'service: gmail' is often more reliable on Render
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true, // TLS/SSL
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
     },
-    // Production settings for clouds
-    pool: true,
-    maxConnections: 3,
-    connectionTimeout: 60000, // Increased to 60 seconds
-    greetingTimeout: 60000,
-    socketTimeout: 60000,
-    debug: true,
-    logger: true,
+    // Cloud optimization
+    socketTimeout: 30000,
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
     tls: {
+        // Essential for cloud providers that intercept traffic
+        servername: 'smtp.gmail.com',
         rejectUnauthorized: false
     }
 });
@@ -34,10 +33,10 @@ const transporter = nodemailer.createTransport({
 // Verify connection on startup
 transporter.verify((error, success) => {
     if (error) {
-        console.error('❌ SMTP Connection Error Details (Render):', error);
-        console.log('💡 Tip: Check if Render IP is blocked by Gmail or if App Password is correct.');
+        console.error('❌ SMTP Connection Error (Render Firewalled?):', error.message);
+        console.log('� Render.com often blocks direct SMTP ports. If this persists, switching to an API-based service (like Resend or SendGrid) is the only permanent fix.');
     } else {
-        console.log('🚀 SMTP Server via Gmail Service is ready');
+        console.log('🚀 SMTP Server is ready (Established via Port 465)');
     }
 });
 
