@@ -591,6 +591,73 @@ const updateCoupon = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Resend registration confirmation email manually
+ * @route   POST /api/admin/registrations/:id/resend-email
+ * @access  Private (Admin only)
+ */
+const resendRegistrationEmail = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Validate MongoDB ObjectId format
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid registration ID format'
+            });
+        }
+
+        const registration = await Registration.findById(id);
+
+        if (!registration) {
+            return res.status(404).json({
+                success: false,
+                message: 'Registration not found'
+            });
+        }
+
+        // Only allow resending for paid registrations
+        if (registration.paymentStatus !== 'paid') {
+            return res.status(400).json({
+                success: false,
+                message: 'Cannot send confirmation email for unpaid registrations'
+            });
+        }
+
+        const { generateInvoice } = require('../utils/invoiceGenerator');
+        const { sendRegistrationConfirmation } = require('../utils/emailService');
+
+        console.log(`📧 Manual resend triggered by admin for: ${registration.email}`);
+
+        // Generate PDF invoice
+        const invoicePDF = await generateInvoice(registration);
+
+        // Send email
+        const result = await sendRegistrationConfirmation(registration, invoicePDF);
+
+        // Update sent flag if it wasn't already set
+        if (!registration.confirmationEmailSent) {
+            registration.confirmationEmailSent = true;
+            await registration.save();
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Confirmation email resent successfully',
+            messageId: result.messageId,
+            to: registration.email
+        });
+
+    } catch (error) {
+        console.error('Resend Email Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to resend email'
+        });
+    }
+};
+
 module.exports = {
     adminLogin,
     getRegistrations,
@@ -600,5 +667,6 @@ module.exports = {
     getCoupons,
     toggleCouponStatus,
     updateCoupon,
-    deleteCoupon
+    deleteCoupon,
+    resendRegistrationEmail
 };

@@ -178,9 +178,37 @@ const sendRegistrationConfirmation = async (registration, invoicePDF) => {
 
                 <div class="footer">
                     <div><strong>Bhaag Dilli Bhaag 2026</strong></div>
-                    <div>1st March 2026 | Sector-10, Rohini</div>
-                    <div style="margin-top: 15px;">
-                        <a href="https://bhaagdillibhaag.in">Official Website</a>
+                    <div style="margin-top: 8px; font-size: 13px; color: #1e3a8a; font-weight: 700;">1st March 2026 | Sector-10, Rohini</div>
+                    
+                    <!-- Contact Info -->
+                    <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+                         <div style="margin-bottom: 10px;">
+                            <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Contact Us</span>
+                         </div>
+                         <div style="font-size: 14px; color: #1e293b; font-weight: 600; margin-bottom: 5px;">
+                            📞 <a href="tel:9311593910" style="color: #1e3a8a; text-decoration: none;">+91 9599218680</a>
+                         </div>
+                         <div style="font-size: 14px; color: #1e293b; font-weight: 600;">
+                            ✉️ <a href="mailto:info@bhaagdillibhaag.in" style="color: #1e3a8a; text-decoration: none;">info@bhaagdillibhaag.in</a>
+                         </div>
+                    </div>
+
+                    <!-- Social Links -->
+                    <div style="margin-top: 20px;">
+                        <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; display: block; margin-bottom: 10px;">Follow Our Journey</span>
+                        <a href="https://www.instagram.com/bhaagdillibhaag/" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+                           <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Instagram_logo_2016.svg/32px-Instagram_logo_2016.svg.png" width="24" height="24" alt="Instagram">
+                        </a>
+                        <a href="https://www.facebook.com/profile.php?id=61587329426324" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+                           <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Facebook_Logo_%282019%29.png/32px-Facebook_Logo_%282019%29.png" width="24" height="24" alt="Facebook">
+                        </a>
+                        <a href="https://www.youtube.com/@BhaagDilliBhaag" style="display: inline-block; margin: 0 8px; text-decoration: none;">
+                           <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/YouTube_full-color_icon_%282017%29.svg/32px-YouTube_full-color_icon_%282017%29.svg.png" width="24" height="24" alt="YouTube">
+                        </a>
+                    </div>
+
+                    <div style="margin-top: 25px; font-size: 11px; color: #64748b;">
+                        <a href="https://bhaagdillibhaag.in" style="color: #3b82f6; text-decoration: none; font-weight: 700;">Official Website</a>
                     </div>
                     <div style="margin-top: 15px; font-size: 10px; opacity: 0.6;">
                         &copy; 2026 Bhaag Dilli Bhaag. All rights reserved.

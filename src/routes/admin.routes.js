@@ -10,7 +10,8 @@ const {
     getCoupons,
     toggleCouponStatus,
     updateCoupon,
-    deleteCoupon
+    deleteCoupon,
+    resendRegistrationEmail
 } = require('../controllers/admin.controller');
 
 /**
@@ -19,6 +20,13 @@ const {
  * @access  Public
  */
 router.post('/login', adminLogin);
+
+/**
+ * @route   POST /api/admin/registrations/:id/resend-email
+ * @desc    Resend confirmation email
+ * @access  Private (Admin only)
+ */
+router.post('/registrations/:id/resend-email', authMiddleware, resendRegistrationEmail);
 
 /**
  * @route   GET /api/admin/registrations
