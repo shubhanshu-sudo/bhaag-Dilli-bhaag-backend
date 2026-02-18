@@ -40,6 +40,14 @@ const registrationSchema = new mongoose.Schema({
         },
         default: null
     },
+    bloodGroup: {
+        type: String,
+        enum: {
+            values: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+            message: 'Invalid blood group'
+        },
+        default: null
+    },
     gender: {
         type: String,
         enum: ['Male', 'Female', 'Other'],

@@ -41,6 +41,7 @@ const checkEmail = async (req, res) => {
                     email: registration.email,
                     phone: registration.phone || '',
                     tshirtSize: registration.tshirtSize || '',
+                    bloodGroup: registration.bloodGroup || '',
                     gender: registration.gender || '',
                     dob: registration.dob ? registration.dob.toISOString().split('T')[0] : '',
                     emergencyName: registration.emergencyName || '',
@@ -80,6 +81,7 @@ const createRegistration = async (req, res) => {
             phone,
             race,
             tshirtSize,
+            bloodGroup,
             gender,
             dob,
             emergencyName,
@@ -135,6 +137,7 @@ const createRegistration = async (req, res) => {
             registration.phone = phone;
             registration.race = race;
             registration.tshirtSize = tshirtSize;
+            registration.bloodGroup = bloodGroup;
             registration.amount = correctPrice;
             registration.gender = gender;
             registration.dob = dob;
@@ -162,6 +165,7 @@ const createRegistration = async (req, res) => {
                 phone,
                 race,
                 tshirtSize,
+                bloodGroup,
                 amount: correctPrice,
                 gender,
                 dob,
